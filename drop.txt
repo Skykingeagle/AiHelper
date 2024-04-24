@@ -1,0 +1,107 @@
+import React, { useState } from "react";
+import { Autocomplete, TextField, createFilterOptions } from "@mui/material";
+import parse from "autosuggest-highlight/parse";
+import match from "autosuggest-highlight/match";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+
+// Sample hierarchical data
+const data = [
+  {
+    id: 1,
+    name: "Category 1",
+    childCategories: [
+      { id: 11, name: "Subcategory 1.1" },
+      { id: 12, name: "Subcategory 1.2" },
+    ],
+  },
+  {
+    id: 2,
+    name: "Category 2",
+    childCategories: [
+      { id: 21, name: "Subcategory 2.1" },
+      { id: 22, name: "Subcategory 2.2" },
+    ],
+  },
+];
+
+// Convert hierarchical data to options
+const toOptions = (category, depth = 0, parentId = null) => {
+  const { id, name, childCategories = [] } = category;
+  const children = childCategories.flatMap((child) =>
+    toOptions(child, depth + 1, id)
+  );
+  const option = {
+    id,
+    name,
+    depth,
+    parentId,
+    matchTerms: [name].concat(children.map((obj) => obj.name)),
+  };
+  return [option].concat(children);
+};
+
+// Flatten the hierarchical data to create options list
+const optionsList = data.flatMap((category) => toOptions(category));
+
+export default () => {
+  const [expandedOptions, setExpandedOptions] = useState({});
+
+  const toggleOptionExpansion = (optionId) => {
+    setExpandedOptions((prevExpandedOptions) => ({
+      ...prevExpandedOptions,
+      [optionId]: !prevExpandedOptions[optionId],
+    }));
+  };
+
+  return (
+    <Autocomplete
+      options={optionsList}
+      getOptionLabel={(option) => option.name}
+      renderOption={(props, option, { inputValue }) => {
+        const matches = match(option.name, inputValue);
+        const parts = parse(option.name, matches);
+        console.log("Child categories:", option.childCategories);
+        const hasChildren = option.childCategories && option.childCategories.length > 0;
+        const isExpanded = !!expandedOptions[option.id];
+        return (
+          <li {...props} style={{ listStyleType: "none" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginLeft: 16 * option.depth,
+              }}
+            >
+              {hasChildren && (
+                <span
+                  onClick={() => toggleOptionExpansion(option.id)}
+                  style={{ cursor: "pointer", marginRight: 4 }}
+                >
+                  {isExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+                </span>
+              )}
+              {parts.map((part, index) => (
+                <span
+                  key={index}
+                  style={{
+                    fontWeight: part.highlight ? 700 : 400,
+                  }}
+                >
+                  {part.text}
+                </span>
+              ))}
+            </div>
+          </li>
+        );
+      }}
+      
+      renderInput={(params) => (
+        <TextField {...params} placeholder="Select benchmark" />
+      )}
+      filterOptions={createFilterOptions({
+        stringify: (option) => option.matchTerms.join("//"),
+      })}
+    />
+  );
+};
