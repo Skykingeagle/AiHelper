@@ -1,5 +1,9 @@
-import React, { useState } from "react";
-import { Autocomplete, TextField, createFilterOptions } from "@mui/material";
+import React from "react";
+import {
+  Autocomplete,
+  TextField,
+  createFilterOptions,
+} from "@mui/material";
 import parse from "autosuggest-highlight/parse";
 import match from "autosuggest-highlight/match";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -36,7 +40,9 @@ const toOptions = (category, depth = 0, parentId = null) => {
     name,
     depth,
     parentId,
+    childCategories: children, // Assign children to each option
     matchTerms: [name].concat(children.map((obj) => obj.name)),
+    collapsed: true, // Initially collapsed
   };
   return [option].concat(children);
 };
@@ -45,13 +51,8 @@ const toOptions = (category, depth = 0, parentId = null) => {
 const optionsList = data.flatMap((category) => toOptions(category));
 
 export default () => {
-  const [expandedOptions, setExpandedOptions] = useState({});
-
-  const toggleOptionExpansion = (optionId) => {
-    setExpandedOptions((prevExpandedOptions) => ({
-      ...prevExpandedOptions,
-      [optionId]: !prevExpandedOptions[optionId],
-    }));
+  const toggleOptionExpansion = (option) => {
+    option.collapsed = !option.collapsed;
   };
 
   return (
@@ -61,9 +62,8 @@ export default () => {
       renderOption={(props, option, { inputValue }) => {
         const matches = match(option.name, inputValue);
         const parts = parse(option.name, matches);
-        console.log("Child categories:", option.childCategories);
-        const hasChildren = option.childCategories && option.childCategories.length > 0;
-        const isExpanded = !!expandedOptions[option.id];
+        const hasChildren = option.childCategories && option.childCategories.length > 0; // Check if option has children
+        const isExpanded = !option.collapsed;
         return (
           <li {...props} style={{ listStyleType: "none" }}>
             <div
@@ -75,7 +75,7 @@ export default () => {
             >
               {hasChildren && (
                 <span
-                  onClick={() => toggleOptionExpansion(option.id)}
+                  onClick={() => toggleOptionExpansion(option)}
                   style={{ cursor: "pointer", marginRight: 4 }}
                 >
                   {isExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
@@ -95,7 +95,6 @@ export default () => {
           </li>
         );
       }}
-      
       renderInput={(params) => (
         <TextField {...params} placeholder="Select benchmark" />
       )}
