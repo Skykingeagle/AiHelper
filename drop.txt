@@ -1,11 +1,7 @@
-import React from "react";
-import {
-  Autocomplete,
-  TextField,
-  createFilterOptions,
-} from "@mui/material";
-import parse from "autosuggest-highlight/parse";
-import match from "autosuggest-highlight/match";
+import React, { useState } from "react";
+import { Autocomplete, TextField, createFilterOptions } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
@@ -23,84 +19,163 @@ const data = [
     id: 2,
     name: "Category 2",
     childCategories: [
-      { id: 21, name: "Subcategory 2.1" },
+      {
+        id: 21,
+        name: "Subcategory 2.1",
+        childCategories: [
+          { id: 41, name: "Subcategory 4.1" },
+          { id: 42, name: "Subcategory 4.2" },
+        ],
+      },
       { id: 22, name: "Subcategory 2.2" },
+    ],
+  },
+  {
+    id: 3,
+    name: "Category 3",
+    childCategories: [
+      { id: 31, name: "Subcategory 3.1" },
+      { id: 32, name: "Subcategory 3.2" },
     ],
   },
 ];
 
 // Convert hierarchical data to options
-const toOptions = (category, depth = 0, parentId = null) => {
+const toOptions = (category, depth = 0) => {
   const { id, name, childCategories = [] } = category;
-  const children = childCategories.flatMap((child) =>
-    toOptions(child, depth + 1, id)
-  );
   const option = {
     id,
     name,
     depth,
-    parentId,
-    childCategories: children, // Assign children to each option
-    matchTerms: [name].concat(children.map((obj) => obj.name)),
-    collapsed: true, // Initially collapsed
+    childCategories,
   };
-  return [option].concat(children);
+  return option;
 };
 
 // Flatten the hierarchical data to create options list
 const optionsList = data.flatMap((category) => toOptions(category));
 
+const HierarchicalOption = ({ option, onClick, highlighted }) => {
+  const [expand, setExpanded] = useState(false);
+  const hasChildren = option.childCategories?.length > 0; // Optional chaining
+  const isExpanded = expand;
+
+  const handleClick = () => {
+    if (!hasChildren) {
+      onClick(option); // Call onClick only if there are no child categories
+    }
+  };
+
+  return (
+    <li
+      style={{
+        listStyleType: "none",
+        paddingLeft: `${1.5 * option.depth}rem`, // Adjust the padding calculation
+        borderLeft: option.depth > 0 ? "1px solid black" : "none", // Add border-left for child options
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+        }}
+        onClick={handleClick} // Add onClick handler to the entire option
+      >
+        {hasChildren && (
+          <span
+            onClick={() => setExpanded(!expand)}
+            style={{ cursor: "pointer", marginRight: 4 }}
+          >
+            {isExpanded ? <RemoveIcon /> : <AddIcon />}
+          </span>
+        )}
+
+        <span
+          style={{
+            fontWeight: highlighted ? 700 : 400,
+            color: option.depth > 0 ? "blue" : "inherit", // Bold and blue color for child nodes
+          }}
+        >
+          {option.depth > 0 && "- "} {/* Add bullet point for nested items */}
+          {option.name}
+        </span>
+      </div>
+      {isExpanded && hasChildren && (
+        <ul style={{ paddingLeft: "1rem" }}> {/* Adjust padding-left for child options */}
+          {option.childCategories.map((childOption) => (
+            <HierarchicalOption
+              key={childOption.id}
+              option={childOption}
+              onClick={onClick} // Pass onClick handler recursively to child options
+              highlighted={highlighted}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+};
+
+
 export default () => {
-  const toggleOptionExpansion = (option) => {
-    option.collapsed = !option.collapsed;
+  const [selectedOption, setSelectedOption] = useState(null);
+
+  const handleOptionClick = (option) => {
+    setSelectedOption(option);
+  };
+
+  // Function to get the label for an option
+  const getOptionLabel = (option) => {
+    // If the option has a name, return it
+    if (option.name) {
+      return option.name;
+    }
+    // If the option is an object with a childCategories property, concatenate the names of child categories
+    if (option.childCategories && option.childCategories.length > 0) {
+      return option.childCategories.map((child) => child.name).join(" ");
+    }
+    return ""; // Default to an empty string if no name is found
+  };
+
+  // Custom filter options function
+  const filterOptions = (options, state) => {
+    const filteredOptions = options.filter((option) => {
+      const optionLabel = getOptionLabel(option).toLowerCase();
+      const inputValue = state.inputValue.toLowerCase();
+
+      // Check if the option label contains the search query
+      if (optionLabel.includes(inputValue)) {
+        return true;
+      }
+
+      // Recursively check child categories for a match
+      if (option.childCategories && option.childCategories.length > 0) {
+        return filterOptions(option.childCategories, state).length > 0;
+      }
+
+      return false;
+    });
+
+    return filteredOptions;
   };
 
   return (
     <Autocomplete
+      value={selectedOption}
+      onChange={(event, newValue) => setSelectedOption(newValue)}
       options={optionsList}
-      getOptionLabel={(option) => option.name}
-      renderOption={(props, option, { inputValue }) => {
-        const matches = match(option.name, inputValue);
-        const parts = parse(option.name, matches);
-        const hasChildren = option.childCategories && option.childCategories.length > 0; // Check if option has children
-        const isExpanded = !option.collapsed;
-        return (
-          <li {...props} style={{ listStyleType: "none" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginLeft: 16 * option.depth,
-              }}
-            >
-              {hasChildren && (
-                <span
-                  onClick={() => toggleOptionExpansion(option)}
-                  style={{ cursor: "pointer", marginRight: 4 }}
-                >
-                  {isExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
-                </span>
-              )}
-              {parts.map((part, index) => (
-                <span
-                  key={index}
-                  style={{
-                    fontWeight: part.highlight ? 700 : 400,
-                  }}
-                >
-                  {part.text}
-                </span>
-              ))}
-            </div>
-          </li>
-        );
-      }}
+      getOptionLabel={getOptionLabel} // Use the custom getOptionLabel function
+      renderOption={(props, option, state) => (
+        <HierarchicalOption
+          option={option}
+          onClick={handleOptionClick}
+          highlighted={state.highlighted}
+        />
+      )}
       renderInput={(params) => (
         <TextField {...params} placeholder="Select benchmark" />
       )}
-      filterOptions={createFilterOptions({
-        stringify: (option) => option.matchTerms.join("//"),
-      })}
+      filterOptions={filterOptions}
     />
   );
 };
