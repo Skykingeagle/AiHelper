@@ -1,181 +1,66 @@
-import React, { useState } from "react";
-import { Autocomplete, TextField, createFilterOptions } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import React, { useState, useMemo } from 'react';
+import { FixedSizeList as List } from 'react-window';
+import TreeView from '@mui/lab/TreeView';
+import TreeItem from '@mui/lab/TreeItem';
+import { ExpandMore, ChevronRight } from '@mui/icons-material';
 
-// Sample hierarchical data
-const data = [
-  {
-    id: 1,
-    name: "Category 1",
-    childCategories: [
-      { id: 11, name: "Subcategory 1.1" },
-      { id: 12, name: "Subcategory 1.2" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Category 2",
-    childCategories: [
-      {
-        id: 21,
-        name: "Subcategory 2.1",
-        childCategories: [
-          { id: 41, name: "Subcategory 4.1" },
-          { id: 42, name: "Subcategory 4.2" },
-        ],
-      },
-      { id: 22, name: "Subcategory 2.2" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Category 3",
-    childCategories: [
-      { id: 31, name: "Subcategory 3.1" },
-      { id: 32, name: "Subcategory 3.2" },
-    ],
-  },
+// Example tree data
+const treeData = [
+  { id: '1', name: 'Item 1', children: [{ id: '2', name: 'Item 1.1' }, { id: '3', name: 'Item 1.2' }] },
+  { id: '4', name: 'Item 2', children: [{ id: '5', name: 'Item 2.1' }] },
 ];
 
-// Convert hierarchical data to options
-const toOptions = (category, depth = 0) => {
-  const { id, name, childCategories = [] } = category;
-  const option = {
-    id,
-    name,
-    depth,
-    childCategories,
-  };
-  return option;
+// Helper function to flatten the tree data
+const flattenTree = (nodes, expanded, depth = 0) => {
+  let flatNodes = [];
+  nodes.forEach(node => {
+    flatNodes.push({ ...node, depth });
+    if (node.children && expanded.includes(node.id)) {
+      flatNodes = flatNodes.concat(flattenTree(node.children, expanded, depth + 1));
+    }
+  });
+  return flatNodes;
 };
 
-// Flatten the hierarchical data to create options list
-const optionsList = data.flatMap((category) => toOptions(category));
+const VirtualizedTreeView = () => {
+  const [expanded, setExpanded] = useState([]);
 
-const HierarchicalOption = ({ option, onClick, highlighted }) => {
-  const [expand, setExpanded] = useState(false);
-  const hasChildren = option.childCategories?.length > 0; // Optional chaining
-  const isExpanded = expand;
+  const flatNodes = useMemo(() => flattenTree(treeData, expanded), [treeData, expanded]);
 
-  const handleClick = () => {
-    if (!hasChildren) {
-      onClick(option); // Call onClick only if there are no child categories
-    }
+  const handleToggle = (event, nodeIds) => {
+    setExpanded(nodeIds);
   };
 
-  return (
-    <li
-      style={{
-        listStyleType: "none",
-        paddingLeft: `${1.5 * option.depth}rem`, // Adjust the padding calculation
-        borderLeft: option.depth > 0 ? "1px solid black" : "none", // Add border-left for child options
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-        }}
-        onClick={handleClick} // Add onClick handler to the entire option
-      >
-        {hasChildren && (
-          <span
-            onClick={() => setExpanded(!expand)}
-            style={{ cursor: "pointer", marginRight: 4 }}
-          >
-            {isExpanded ? <RemoveIcon /> : <AddIcon />}
-          </span>
-        )}
-
-        <span
-          style={{
-            fontWeight: highlighted ? 700 : 400,
-            color: option.depth > 0 ? "blue" : "inherit", // Bold and blue color for child nodes
-          }}
-        >
-          {option.depth > 0 && "- "} {/* Add bullet point for nested items */}
-          {option.name}
-        </span>
-      </div>
-      {isExpanded && hasChildren && (
-        <ul style={{ paddingLeft: "1rem" }}> {/* Adjust padding-left for child options */}
-          {option.childCategories.map((childOption) => (
-            <HierarchicalOption
-              key={childOption.id}
-              option={childOption}
-              onClick={onClick} // Pass onClick handler recursively to child options
-              highlighted={highlighted}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-};
-
-
-export default () => {
-  const [selectedOption, setSelectedOption] = useState(null);
-
-  const handleOptionClick = (option) => {
-    setSelectedOption(option);
-  };
-
-  // Function to get the label for an option
-  const getOptionLabel = (option) => {
-    // If the option has a name, return it
-    if (option.name) {
-      return option.name;
-    }
-    // If the option is an object with a childCategories property, concatenate the names of child categories
-    if (option.childCategories && option.childCategories.length > 0) {
-      return option.childCategories.map((child) => child.name).join(" ");
-    }
-    return ""; // Default to an empty string if no name is found
-  };
-
-  // Custom filter options function
-  const filterOptions = (options, state) => {
-    const filteredOptions = options.filter((option) => {
-      const optionLabel = getOptionLabel(option).toLowerCase();
-      const inputValue = state.inputValue.toLowerCase();
-
-      // Check if the option label contains the search query
-      if (optionLabel.includes(inputValue)) {
-        return true;
-      }
-
-      // Recursively check child categories for a match
-      if (option.childCategories && option.childCategories.length > 0) {
-        return filterOptions(option.childCategories, state).length > 0;
-      }
-
-      return false;
-    });
-
-    return filteredOptions;
-  };
-
-  return (
-    <Autocomplete
-      value={selectedOption}
-      onChange={(event, newValue) => setSelectedOption(newValue)}
-      options={optionsList}
-      getOptionLabel={getOptionLabel} // Use the custom getOptionLabel function
-      renderOption={(props, option, state) => (
-        <HierarchicalOption
-          option={option}
-          onClick={handleOptionClick}
-          highlighted={state.highlighted}
+  const renderRow = ({ index, style }) => {
+    const node = flatNodes[index];
+    return (
+      <div style={style} key={node.id}>
+        <TreeItem
+          nodeId={node.id}
+          label={node.name}
+          style={{ paddingLeft: node.depth * 16 }}
         />
-      )}
-      renderInput={(params) => (
-        <TextField {...params} placeholder="Select benchmark" />
-      )}
-      filterOptions={filterOptions}
-    />
+      </div>
+    );
+  };
+
+  return (
+    <TreeView
+      expanded={expanded}
+      onNodeToggle={handleToggle}
+      defaultCollapseIcon={<ExpandMore />}
+      defaultExpandIcon={<ChevronRight />}
+    >
+      <List
+        height={400}
+        itemCount={flatNodes.length}
+        itemSize={35}
+        width="100%"
+      >
+        {renderRow}
+      </List>
+    </TreeView>
   );
 };
+
+export default VirtualizedTreeView;
