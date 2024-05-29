@@ -1,66 +1,156 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import TreeView from '@mui/lab/TreeView';
-import TreeItem from '@mui/lab/TreeItem';
-import { ExpandMore, ChevronRight } from '@mui/icons-material';
+import { Popover, Button } from '@mui/material';
+import { TreeView, TreeItem } from '@mui/lab';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 
 // Example tree data
-const treeData = [
-  { id: '1', name: 'Item 1', children: [{ id: '2', name: 'Item 1.1' }, { id: '3', name: 'Item 1.2' }] },
-  { id: '4', name: 'Item 2', children: [{ id: '5', name: 'Item 2.1' }] },
+const data = [
+  {
+    id: '1',
+    label: 'Parent 1',
+    children: [
+      {
+        id: '2',
+        label: 'Child 1-1',
+        children: [
+          { id: '3', label: 'Child 1-1-1' },
+          { id: '4', label: 'Child 1-1-2' },
+          // Add more leaf nodes here if needed
+        ],
+      },
+      { id: '5', label: 'Child 1-2' },
+    ],
+  },
+  {
+    id: '6',
+    label: 'Parent 2',
+    children: [
+      { id: '7', label: 'Child 2-1' },
+      { id: '8', label: 'Child 2-2' },
+    ],
+  },
 ];
 
-// Helper function to flatten the tree data
-const flattenTree = (nodes, expanded, depth = 0) => {
-  let flatNodes = [];
-  nodes.forEach(node => {
-    flatNodes.push({ ...node, depth });
-    if (node.children && expanded.includes(node.id)) {
-      flatNodes = flatNodes.concat(flattenTree(node.children, expanded, depth + 1));
+// Recursive function to assign unique IDs if needed
+let uniqueIdCounter = 0;
+const assignUniqueIds = (items) => {
+  return items.map((item) => {
+    if (!item.id) {
+      uniqueIdCounter += 1;
+      item.id = `unique-id-${uniqueIdCounter}`;
     }
+    if (item.children) {
+      item.children = assignUniqueIds(item.children);
+    }
+    return item;
   });
-  return flatNodes;
 };
 
-const VirtualizedTreeView = () => {
-  const [expanded, setExpanded] = useState([]);
-
-  const flatNodes = useMemo(() => flattenTree(treeData, expanded), [treeData, expanded]);
-
-  const handleToggle = (event, nodeIds) => {
-    setExpanded(nodeIds);
-  };
-
-  const renderRow = ({ index, style }) => {
-    const node = flatNodes[index];
+// Virtualized component for leaf nodes
+const VirtualizedLeafNodes = ({ children }) => {
+  const Row = ({ index, style }) => {
+    const child = children[index];
     return (
-      <div style={style} key={node.id}>
-        <TreeItem
-          nodeId={node.id}
-          label={node.name}
-          style={{ paddingLeft: node.depth * 16 }}
-        />
+      <div style={style} key={child.id}>
+        <TreeItem nodeId={child.id} label={child.label} />
       </div>
     );
   };
 
   return (
-    <TreeView
-      expanded={expanded}
-      onNodeToggle={handleToggle}
-      defaultCollapseIcon={<ExpandMore />}
-      defaultExpandIcon={<ChevronRight />}
+    <List
+      height={200} // Adjust the height as needed
+      itemCount={children.length}
+      itemSize={35}
+      width="100%"
     >
-      <List
-        height={400}
-        itemCount={flatNodes.length}
-        itemSize={35}
-        width="100%"
-      >
-        {renderRow}
-      </List>
+      {Row}
+    </List>
+  );
+};
+
+const VirtualizedTreeView = ({ data }) => {
+  const [expandedNodes, setExpandedNodes] = useState([]);
+
+  const handleToggle = useCallback((event, nodeIds) => {
+    setExpandedNodes(nodeIds);
+  }, []);
+
+  const isExpanded = (nodeId) => expandedNodes.includes(nodeId);
+
+  const renderTree = (nodes) => (
+    <TreeItem
+      key={nodes.id}
+      nodeId={nodes.id}
+      label={nodes.label}
+      collapseIcon={<RemoveIcon />}
+      expandIcon={<AddIcon />}
+    >
+      {Array.isArray(nodes.children) ? (
+        isExpanded(nodes.id) ? (
+          nodes.children.length > 10 ? (
+            // Use virtualization for nodes with many children
+            <VirtualizedLeafNodes children={nodes.children} />
+          ) : (
+            nodes.children.map((node) => renderTree(node))
+          )
+        ) : null
+      ) : null}
+    </TreeItem>
+  );
+
+  const processedData = useMemo(() => assignUniqueIds(data), [data]);
+
+  return (
+    <TreeView
+      aria-label="virtualized-tree-view"
+      defaultCollapseIcon={<RemoveIcon />}
+      defaultExpandIcon={<AddIcon />}
+      expanded={expandedNodes}
+      onNodeToggle={handleToggle}
+    >
+      {processedData.map((tree) => renderTree(tree))}
     </TreeView>
   );
 };
 
-export default VirtualizedTreeView;
+const App = () => {
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handlePopoverOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handlePopoverClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
+  return (
+    <div>
+      <Button onClick={handlePopoverOpen}>Open Popover</Button>
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handlePopoverClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+      >
+        <div style={{ height: 400, overflowY: 'auto' }} id="scrollable-div">
+          <VirtualizedTreeView data={data} />
+        </div>
+      </Popover>
+    </div>
+  );
+};
+
+export default App;
