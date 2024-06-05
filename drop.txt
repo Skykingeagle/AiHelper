@@ -1,200 +1,56 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { VariableSizeList as List } from 'react-window';
-import { Popover, Button, Box } from '@mui/material';
-import { TreeView, TreeItem } from '@mui/lab';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
+import * as React from 'react';
+import { useState } from 'react';
+import Chip from '@mui/material/Chip';
+import TextField from '@mui/material/TextField';
+import ComponentA from './ComponentA'; // Import your component
+import ComponentB from './ComponentB'; // Import your component
+import ComponentC from './ComponentC'; // Import your component
 
-// Example tree data
-const data = [
-  {
-    id: '1',
-    label: 'Parent 1',
-    children: [
-      {
-        id: '2',
-        label: 'Child 1-1',
-        children: [
-          { id: '3', label: 'Child 1-1-1' },
-          { id: '4', label: 'Child 1-1-2' },
-        ],
-      },
-      { id: '5', label: 'Child 1-2' },
-    ],
-  },
-  {
-    id: '6',
-    label: 'Parent 2',
-    children: [
-      { id: '7', label: 'Child 2-1' },
-      { id: '8', label: 'Child 2-2' },
-    ],
-  },
+const options = [
+  { label: 'Component A', value: 'A' },
+  { label: 'Component B', value: 'B' },
+  { label: 'Component C', value: 'C' },
 ];
 
-// Recursive function to assign unique IDs if needed
-let uniqueIdCounter = 0;
-const assignUniqueIds = (items) => {
-  return items.map((item) => {
-    if (!item.id) {
-      uniqueIdCounter += 1;
-      item.id = `unique-id-${uniqueIdCounter}`;
+export default function CheckboxesTags() {
+  const [selectedOptions, setSelectedOptions] = useState([]);
+
+  const toggleOption = (option) => {
+    if (selectedOptions.some((selectedOption) => selectedOption.value === option.value)) {
+      // If the option is already selected, deselect it
+      setSelectedOptions(prevOptions =>
+        prevOptions.filter((prevOption) => prevOption.value !== option.value)
+      );
+    } else {
+      // If the option is not selected, select it
+      setSelectedOptions(prevOptions => [...prevOptions, option]);
     }
-    if (item.children) {
-      item.children = assignUniqueIds(item.children);
-    }
-    return item;
-  });
-};
-
-// Component to measure and render TreeItems
-const MeasuredTreeItem = ({ node, registerItemSize }) => {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (ref.current) {
-      registerItemSize(node.id, ref.current.getBoundingClientRect().height);
-    }
-  }, [ref.current]);
-
-  return (
-    <div ref={ref}>
-      <TreeItem nodeId={node.id} label={node.label} />
-    </div>
-  );
-};
-
-// Virtualized component for leaf nodes
-const VirtualizedLeafNodes = ({ children, getItemSize }) => {
-  const Row = ({ index, style }) => {
-    const child = children[index];
-    return (
-      <div style={style} key={child.id}>
-        <TreeItem nodeId={child.id} label={child.label} />
-      </div>
-    );
   };
-
-  return (
-    <List
-      height={Math.min(children.length * getItemSize(0), 400)}
-      itemCount={children.length}
-      itemSize={getItemSize}
-      width="100%"
-    >
-      {Row}
-    </List>
-  );
-};
-
-const VirtualizedTreeView = ({ data, itemSizes, registerItemSize }) => {
-  const [expandedNodes, setExpandedNodes] = useState([]);
-
-  const handleToggle = useCallback((event, nodeIds) => {
-    setExpandedNodes(nodeIds);
-  }, []);
-
-  const isExpanded = (nodeId) => expandedNodes.includes(nodeId);
-
-  const renderTree = (nodes) => (
-    <TreeItem
-      key={nodes.id}
-      nodeId={nodes.id}
-      label={nodes.label}
-      collapseIcon={<RemoveIcon />}
-      expandIcon={<AddIcon />}
-    >
-      {Array.isArray(nodes.children) ? (
-        isExpanded(nodes.id) ? (
-          nodes.children.length > 10 ? (
-            // Use virtualization for nodes with many children
-            <VirtualizedLeafNodes
-              children={nodes.children}
-              getItemSize={(index) => itemSizes[nodes.children[index].id] || 35}
-            />
-          ) : (
-            nodes.children.map((node) => (
-              <MeasuredTreeItem
-                key={node.id}
-                node={node}
-                registerItemSize={registerItemSize}
-              />
-            ))
-          )
-        ) : null
-      ) : null}
-    </TreeItem>
-  );
-
-  const processedData = useMemo(() => assignUniqueIds(data), [data]);
-
-  return (
-    <TreeView
-      aria-label="virtualized-tree-view"
-      defaultCollapseIcon={<RemoveIcon />}
-      defaultExpandIcon={<AddIcon />}
-      expanded={expandedNodes}
-      onNodeToggle={handleToggle}
-    >
-      {processedData.map((tree) => renderTree(tree))}
-    </TreeView>
-  );
-};
-
-const App = () => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [itemSizes, setItemSizes] = useState({});
-  const measureRef = useRef(null);
-
-  const handlePopoverOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handlePopoverClose = () => {
-    setAnchorEl(null);
-  };
-
-  const open = Boolean(anchorEl);
-
-  const registerItemSize = (id, size) => {
-    setItemSizes((prev) => ({ ...prev, [id]: size }));
-  };
-
-  useEffect(() => {
-    if (measureRef.current) {
-      setItemSizes((prev) => ({
-        ...prev,
-        measure: measureRef.current.getBoundingClientRect().height,
-      }));
-    }
-  }, [measureRef.current]);
 
   return (
     <div>
-      <Button onClick={handlePopoverOpen}>Open Popover</Button>
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handlePopoverClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'center',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-      >
-        <div style={{ maxHeight: 400, overflowY: 'auto', width: '400px' }}>
-          <VirtualizedTreeView
-            data={data}
-            itemSizes={itemSizes}
-            registerItemSize={registerItemSize}
+      <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+        {options.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            clickable
+            onClick={() => toggleOption(option)}
+            color={selectedOptions.some((selectedOption) => selectedOption.value === option.value) ? 'primary' : 'default'}
+            style={{ margin: '4px' }}
           />
-        </div>
-      </Popover>
+        ))}
+      </div>
+
+      <div style={{ marginTop: '20px' }}>
+        {selectedOptions.map((option) => (
+          <div key={option.value}>
+            {option.value === 'A' && <ComponentA />}
+            {option.value === 'B' && <ComponentB />}
+            {option.value === 'C' && <ComponentC />}
+          </div>
+        ))}
+      </div>
     </div>
   );
-};
-
-export default App;
+}
