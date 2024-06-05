@@ -1,7 +1,8 @@
+// Parent component CheckboxesTags.js
+
 import * as React from 'react';
 import { useState } from 'react';
 import Chip from '@mui/material/Chip';
-import TextField from '@mui/material/TextField';
 import ComponentA from './ComponentA'; // Import your component
 import ComponentB from './ComponentB'; // Import your component
 import ComponentC from './ComponentC'; // Import your component
@@ -27,6 +28,12 @@ export default function CheckboxesTags() {
     }
   };
 
+  const toggleVisibility = (option) => {
+    setSelectedOptions(prevOptions =>
+      prevOptions.filter((prevOption) => prevOption.value !== option.value)
+    );
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', flexWrap: 'wrap' }}>
@@ -43,13 +50,9 @@ export default function CheckboxesTags() {
       </div>
 
       <div style={{ marginTop: '20px' }}>
-        {selectedOptions.map((option) => (
-          <div key={option.value}>
-            {option.value === 'A' && <ComponentA />}
-            {option.value === 'B' && <ComponentB />}
-            {option.value === 'C' && <ComponentC />}
-          </div>
-        ))}
+        {selectedOptions.some((option) => option.value === 'A') && <ComponentA toggleVisibility={() => toggleVisibility({ value: 'A' })} />}
+        {selectedOptions.some((option) => option.value === 'B') && <ComponentB toggleVisibility={() => toggleVisibility({ value: 'B' })} />}
+        {selectedOptions.some((option) => option.value === 'C') && <ComponentC toggleVisibility={() => toggleVisibility({ value: 'C' })} />}
       </div>
     </div>
   );
