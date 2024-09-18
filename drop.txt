@@ -12,10 +12,13 @@ async function checkPermissionForDocument(contentId, userId) {
       }
     });
     
-    const restrictions = response.data.view.restrictions.group;
-    // For simplicity, we assume user 'abc' is part of 'confluence-users'
-    return restrictions.some(group => group.name === 'confluence-users');
+    const { read } = response.data;
+    if (read && read.restrictions && read.restrictions.user && Array.isArray(read.restrictions.user.results)) {
+      // Check if the user is in the list of users with read permission
+      return read.restrictions.user.results.some(user => user.username === userId);
+    }
     
+    return false; // Default to false if restrictions are not present
   } catch (error) {
     console.error(`Error checking permission for contentId ${contentId}:`, error.message);
     return false; // Assume no permission if there's an error
