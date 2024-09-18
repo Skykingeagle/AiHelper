@@ -1,73 +1,68 @@
-async function checkDocumentPermission(patToken, documentId) {
-  const confluenceApiUrl = `https://your-confluence-instance/rest/api/content/${documentId}?expand=restrictions`;
+const axios = require('axios');
 
+// Mock function to check document permissions using Confluence API
+async function checkPermissionForDocument(contentId, userId) {
+  const confluenceAPIUrl = `https://your-confluence-instance/rest/api/content/${contentId}/restriction/byOperation`;
+  const pat = 'your_personal_access_token';  // Replace with your PAT
+  
   try {
-    const response = await axios.get(confluenceApiUrl, {
+    const response = await axios.get(confluenceAPIUrl, {
       headers: {
-        Authorization: `Bearer ${patToken}`,
-        'Content-Type': 'application/json',
-      },
+        'Authorization': `Bearer ${pat}`
+      }
     });
-
-    // Get view restrictions
-    const restrictions = response.data.restrictions || {};
-    const viewRestrictions = restrictions.view || [];
-
-    // Check if the hard-coded user "abc" is restricted
-    const hasPermission = !viewRestrictions.some(restriction => {
-      // Check if "abc" is listed in the restricted users
-      const restrictedUsers = restriction.users || [];
-      return restrictedUsers.includes('abc');  // Hard-coded user ID or username
-    });
-
-    return hasPermission;
+    
+    const restrictions = response.data.view.restrictions.group;
+    // For simplicity, we assume user 'abc' is part of 'confluence-users'
+    return restrictions.some(group => group.name === 'confluence-users');
+    
   } catch (error) {
-    console.error('Error checking document permission:', error);
-    return false;  // Assume no access if there's an error
+    console.error(`Error checking permission for contentId ${contentId}:`, error.message);
+    return false; // Assume no permission if there's an error
   }
 }
 
 router.get("/kbs/:id/search", async (req, res) => {
   try {
     const query = req.query.query;
-    const kb_id = req.params.id;
-    const patToken = 'your-generated-pat-token';  // Replace with your PAT
+    let kb_id = req.params.id;
 
-    // Fetch the knowledge base and perform a query
-    const kb = await queryDatabase(
-      `SELECT collection_id, collection_name, name FROM ama_nip_kb kb
-       INNER JOIN ama_nlp_collection c ON kb.collection_id = c.ID
-       WHERE kb.ID = ${kb_id};`
-    );
-    const collectionName = kb[0].collection_name + "_" + config.env;
-    const embeddingFunction = new NPCEmbedding();
+    // Fetch knowledge base info
+    let kb = await queryDatabase('SELECT collection_id, collection_name, name FROM ama_nip_kb kb WHERE kb.ID = $(kb_id);');
+    kb = kb[0];
+
+    let collectionName = kb.collection_name + "_" + config.env;
+    let embeddingFunction = new NPCEmbedding();
+
     const collection = await chroma.getCollection({
       name: collectionName,
       embeddingFunction: embeddingFunction,
     });
 
-    const response = await collection.query({ queryTexts: query, nResults: 10 });
-    const documentIds = response["ids"][0];  // Array of document IDs
+    // Query the collection
+    let response = await collection.query({ queryTexts: query, nResults: 10 });
 
-    const documents = [];
+    let documents = [];
 
-    for (let i = 0; i < documentIds.length; i++) {
-      const docId = documentIds[i];
-      
-      // Check if the user "abc" has permission to view each document
-      const hasPermission = await checkDocumentPermission(patToken, docId);
+    for (let i = 0; i < response["ids"][0].length; i++) {
+      let docId = response["ids"][0][i];
+
+      // Check if the user 'abc' has permission to view this document
+      let hasPermission = await checkPermissionForDocument(docId, 'abc');
+
       if (hasPermission) {
         documents.push({
           id: docId,
-          metadata: response["metadatas"][0][i],  // Use index to get the correct metadata
-          pageContent: response["documents"][0][i],  // Use index to get the correct content
+          metadata: response["metadatas"][0][i],
+          pageContent: response["documents"][0][i],
         });
       }
     }
 
+    // Send only the documents that the user has permission to view
     res.send(documents);
+
   } catch (e) {
-    console.error("Error during document search or permission check:", e);
-    res.status(500).send("Error processing request");
+    res.status(500).send("Could not process the query");
   }
 });
