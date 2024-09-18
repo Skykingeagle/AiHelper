@@ -1,142 +1,28 @@
-// CodeSnippet.js
-import React, { useState } from "react";
-import {
-  Box,
-  Button,
-  IconButton,
-  ToggleButton,
-  ToggleButtonGroup,
-  Collapse,
-} from "@mui/material";
-import { ContentCopy, ExpandLess, ExpandMore } from "@mui/icons-material";
-import { CopyToClipboard } from "react-copy-to-clipboard";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { materialDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+async function checkDocumentPermission(patToken, documentId) {
+  const confluenceApiUrl = `https://your-confluence-instance/rest/api/content/${documentId}?expand=restrictions`;
 
-const customLineNumberStyle = {
-  fontSize: "0.8em",
-  color: "#6272a4",
-};
+  try {
+    const response = await axios.get(confluenceApiUrl, {
+      headers: {
+        Authorization: `Bearer ${patToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-const CodeSnippet = ({ codeJava, codePython, collapsedCodeRange }) => {
-  const [language, setLanguage] = useState("java");
-  const [copied, setCopied] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+    // Get view restrictions
+    const restrictions = response.data.restrictions || {};
+    const viewRestrictions = restrictions.view || [];
 
-  const handleLanguageChange = (event, newLanguage) => {
-    if (newLanguage !== null) {
-      setLanguage(newLanguage);
-    }
-  };
+    // Check if the hard-coded user "abc" is restricted
+    const hasPermission = !viewRestrictions.some(restriction => {
+      // Check if "abc" is listed in the restricted users
+      const restrictedUsers = restriction.users || [];
+      return restrictedUsers.includes('abc');  // Hard-coded user ID or username
+    });
 
-  const handleCopy = () => {
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleExpandClick = () => {
-    setExpanded(!expanded);
-  };
-
-  const code = language === "java" ? codeJava : codePython;
-
-  function getCodeRange(code, startLine, endLine) {
-    return code
-      .split("\n")
-      .slice(startLine - 1, endLine)
-      .join("\n");
+    return hasPermission;
+  } catch (error) {
+    console.error('Error checking document permission:', error);
+    return false;  // Assume no access if there's an error
   }
-
-  const collapsedCode = getCodeRange(
-    code,
-    collapsedCodeRange.startLine,
-    collapsedCodeRange.endLine
-  );
-
-  return (
-    <Box sx={{ border: "1px solid #ddd", borderRadius: 1, mb: 2 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          p: 1,
-          borderBottom: "1px solid #ddd",
-          backgroundColor: "#fff", // Toolbar background color
-        }}
-      >
-        <ToggleButtonGroup
-          value={language}
-          exclusive
-          onChange={handleLanguageChange}
-          size="small"
-        >
-          <ToggleButton value="java">Java</ToggleButton>
-          <ToggleButton value="python">Python</ToggleButton>
-        </ToggleButtonGroup>
-        <Box>
-          <CopyToClipboard text={code} onCopy={handleCopy}>
-            <Button variant="outlined" size="small" startIcon={<ContentCopy />}>
-              {copied ? "Copied!" : "Copy"}
-            </Button>
-          </CopyToClipboard>
-          <IconButton size="small" onClick={handleExpandClick}>
-            {expanded ? <ExpandLess /> : <ExpandMore />}
-          </IconButton>
-        </Box>
-      </Box>
-      <Collapse in={!expanded} timeout="auto" unmountOnExit>
-        <Box sx={{ p: 2, backgroundColor: "#2d2d2d" }}>
-          <SyntaxHighlighter
-            showLineNumbers
-            language={language}
-            style={materialDark}
-            lineNumberStyle={customLineNumberStyle}
-          >
-            {collapsedCode}
-          </SyntaxHighlighter>
-        </Box>
-      </Collapse>
-      {!expanded && (
-        <Box sx={{ p: 2, backgroundColor: "#2d2d2d" }}>
-          <Button onClick={handleExpandClick}>Show More</Button>
-        </Box>
-      )}
-      {expanded && (
-        <Box sx={{ p: 2, backgroundColor: "#2d2d2d" }}>
-          <SyntaxHighlighter
-            showLineNumbers
-            language={language}
-            style={materialDark}
-            lineNumberStyle={customLineNumberStyle}
-          >
-            {code}
-          </SyntaxHighlighter>
-          <Box sx={{ textAlign: "right", mt: 1 }}>
-            <Button onClick={handleExpandClick}>Show Less</Button>
-          </Box>
-        </Box>
-      )}
-    </Box>
-  );
-};
-
-export default CodeSnippet;
-
-return (
-    <Container>
-      <Typography variant="h4" gutterBottom>
-        Code Snippets Example
-      </Typography>
-      <CodeSnippet
-        codeJava={codeJava}
-        codePython={codePython}
-        collapsedCodeRange={collapsedCodeRange}
-      />
-    </Container>
-  );
-
-
-
-
-
+}
