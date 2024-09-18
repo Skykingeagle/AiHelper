@@ -26,3 +26,48 @@ async function checkDocumentPermission(patToken, documentId) {
     return false;  // Assume no access if there's an error
   }
 }
+
+router.get("/kbs/:id/search", async (req, res) => {
+  try {
+    const query = req.query.query;
+    const kb_id = req.params.id;
+    const patToken = 'your-generated-pat-token';  // Replace with your PAT
+
+    // Fetch the knowledge base and perform a query
+    const kb = await queryDatabase(
+      `SELECT collection_id, collection_name, name FROM ama_nip_kb kb
+       INNER JOIN ama_nlp_collection c ON kb.collection_id = c.ID
+       WHERE kb.ID = ${kb_id};`
+    );
+    const collectionName = kb[0].collection_name + "_" + config.env;
+    const embeddingFunction = new NPCEmbedding();
+    const collection = await chroma.getCollection({
+      name: collectionName,
+      embeddingFunction: embeddingFunction,
+    });
+
+    const response = await collection.query({ queryTexts: query, nResults: 10 });
+    const documentIds = response["ids"][0];  // Array of document IDs
+
+    const documents = [];
+
+    for (let i = 0; i < documentIds.length; i++) {
+      const docId = documentIds[i];
+      
+      // Check if the user "abc" has permission to view each document
+      const hasPermission = await checkDocumentPermission(patToken, docId);
+      if (hasPermission) {
+        documents.push({
+          id: docId,
+          metadata: response["metadatas"][0][i],  // Use index to get the correct metadata
+          pageContent: response["documents"][0][i],  // Use index to get the correct content
+        });
+      }
+    }
+
+    res.send(documents);
+  } catch (e) {
+    console.error("Error during document search or permission check:", e);
+    res.status(500).send("Error processing request");
+  }
+});
