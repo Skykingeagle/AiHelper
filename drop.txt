@@ -13,19 +13,24 @@ function getCookie(name) {
 
 function closeBanner() {
   setCookie('bannerClosed', 'true', 180);  // Set cookie for 180 days
-  document.getElementById('announcement-banner').remove();  // Remove the banner when closed
+  const banner = document.getElementById('announcement-banner');
+  if (banner) {
+    banner.remove();  // Remove the banner when closed
+  }
 }
 
 function showBanner() {
-  const bannerHTML = `
-    <center id="announcement-banner">
+  const banner = document.createElement('div');  // Create a div element
+  banner.id = 'announcement-banner';  // Set the ID for the banner
+  banner.innerHTML = `
+    <center>
       <b>Do you have suggestions?</b>
       <span style="float: right;">
         <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
       </span>
     </center>
   `;
-  document.body.insertAdjacentHTML('afterbegin', bannerHTML);  // Insert the banner into the DOM
+  document.body.insertAdjacentElement('afterbegin', banner);  // Insert the banner into the DOM
 }
 
 function checkBanner() {
