@@ -12,7 +12,7 @@ function getCookie(name) {
 }
 
 function closeBanner() {
-  setCookie('bannerClosed', 'true', 180);  // Set cookie for 180 days
+  setCookie('bannerClosed', 'true', 180); // Set cookie for 180 days
   const banner = document.getElementById('announcement-banner');
   if (banner) {
     banner.remove(); // Remove the banner from the DOM
@@ -22,14 +22,20 @@ function closeBanner() {
 function showBanner() {
   const banner = document.createElement('div'); // Create the banner element
   banner.id = 'announcement-banner'; // Set the ID
+  banner.style.position = 'fixed'; // Optional: To keep it in a fixed position
+  banner.style.top = '0'; // Optional: Adjust as needed
+  banner.style.width = '100%'; // Full width
+  banner.style.backgroundColor = '#f1c40f'; // Background color (optional)
+  banner.style.textAlign = 'center'; // Center the text
+
+  // Use template literals to set the innerHTML
   banner.innerHTML = `
-    <center>
-      <b>Do you have suggestions?</b>
-      <span style="float: right;">
-        <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
-      </span>
-    </center>
+    <b>Do you have suggestions?</b>
+    <span style="float: right;">
+      <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
+    </span>
   `;
+
   document.body.insertAdjacentElement('afterbegin', banner); // Insert the banner into the DOM
 }
 
