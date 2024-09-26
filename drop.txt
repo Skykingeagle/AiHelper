@@ -5,11 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Announcement Banner Example</title>
     <style>
-        /* No need for a static banner; we will create it dynamically */
+        #announcement-banner {
+            display: none; /* Hide the banner by default */
+        }
     </style>
 </head>
 <body>
     <!-- Your Jira navigation bar and other content -->
+
+    <div id="announcement-banner">
+        <center>
+            <b>Do you have suggestions?</b>
+            <span style="float: right;">
+                <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
+            </span>
+        </center>
+    </div>
 
     <script>
         function setCookie(name, value, days) {
@@ -29,28 +40,15 @@
             setCookie('bannerClosed', 'true', 180); // Set cookie for 180 days
             const banner = document.getElementById('announcement-banner');
             if (banner) {
-                banner.remove(); // Remove the banner when closed
+                banner.style.display = 'none'; // Hide the banner
             }
-        }
-
-        function showBanner() {
-            const banner = document.createElement('div'); // Create a new div for the banner
-            banner.id = 'announcement-banner'; // Set the ID for the banner
-            banner.innerHTML = `
-                <center>
-                    <b>Do you have suggestions?</b>
-                    <span style="float: right;">
-                        <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
-                    </span>
-                </center>
-            `;
-            document.body.insertAdjacentElement('afterbegin', banner); // Insert the banner at the top of the body
         }
 
         function checkBanner() {
             const bannerClosed = getCookie('bannerClosed');
+            const banner = document.getElementById('announcement-banner');
             if (bannerClosed !== 'true') {
-                showBanner(); // Only show the banner if it hasn't been closed
+                banner.style.display = 'block'; // Show the banner if it hasn't been closed
             }
         }
 
