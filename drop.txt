@@ -1,52 +1,66 @@
-function setCookie(name, value, days) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcement Banner Example</title>
+</head>
+<body>
+    <!-- Other content of your page -->
 
-function getCookie(name) {
-  const cookies = document.cookie.split('; ').reduce((r, v) => {
-    const parts = v.split('=');
-    return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-  }, '');
-  return cookies;
-}
+    <script>
+        function setCookie(name, value, days) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+        }
 
-function closeBanner() {
-  setCookie('bannerClosed', 'true', 180); // Set cookie for 180 days
-  const banner = document.getElementById('announcement-banner');
-  if (banner) {
-    banner.remove(); // Remove the banner from the DOM
-  }
-}
+        function getCookie(name) {
+            const cookies = document.cookie.split('; ').reduce((r, v) => {
+                const parts = v.split('=');
+                return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+            }, '');
+            return cookies;
+        }
 
-function showBanner() {
-  const banner = document.createElement('div'); // Create the banner element
-  banner.id = 'announcement-banner'; // Set the ID
-  banner.style.position = 'fixed'; // Optional: To keep it in a fixed position
-  banner.style.top = '0'; // Optional: Adjust as needed
-  banner.style.width = '100%'; // Full width
-  banner.style.backgroundColor = '#f1c40f'; // Background color (optional)
-  banner.style.textAlign = 'center'; // Center the text
+        function closeBanner() {
+            setCookie('bannerClosed', 'true', 180); // Set cookie for 180 days
+            const banner = document.getElementById('announcement-banner');
+            if (banner) {
+                banner.remove(); // Remove the banner from the DOM
+            }
+        }
 
-  // Use template literals to set the innerHTML
-  banner.innerHTML = `
-    <b>Do you have suggestions?</b>
-    <span style="float: right;">
-      <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
-    </span>
-  `;
+        function showBanner() {
+            const banner = document.createElement('div'); // Create the banner element
+            banner.id = 'announcement-banner'; // Set the ID
+            banner.style.position = 'fixed'; // Optional: To keep it in a fixed position
+            banner.style.top = '0'; // Optional: Adjust as needed
+            banner.style.width = '100%'; // Full width
+            banner.style.backgroundColor = '#f1c40f'; // Background color (optional)
+            banner.style.textAlign = 'center'; // Center the text
 
-  document.body.insertAdjacentElement('afterbegin', banner); // Insert the banner into the DOM
-}
+            // Use template literals to set the innerHTML
+            banner.innerHTML = `
+                <b>Do you have suggestions?</b>
+                <span style="float: right;">
+                    <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
+                </span>
+            `;
 
-function checkBanner() {
-  const bannerClosed = getCookie('bannerClosed');
-  if (bannerClosed !== 'true') {
-    showBanner(); // Only show the banner if it hasn't been closed
-  }
-}
+            document.body.insertAdjacentElement('afterbegin', banner); // Insert the banner into the DOM
+        }
 
-// Check the banner status on page load
-document.addEventListener('DOMContentLoaded', function () {
-  checkBanner();
-});
+        function checkBanner() {
+            const bannerClosed = getCookie('bannerClosed');
+            if (bannerClosed !== 'true') {
+                showBanner(); // Only show the banner if it hasn't been closed
+            }
+        }
+
+        // Check the banner status on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            checkBanner();
+        });
+    </script>
+</body>
+</html>
