@@ -15,13 +15,13 @@ function closeBanner() {
   setCookie('bannerClosed', 'true', 180);  // Set cookie for 180 days
   const banner = document.getElementById('announcement-banner');
   if (banner) {
-    banner.remove();  // Remove the banner when closed
+    banner.remove(); // Remove the banner from the DOM
   }
 }
 
 function showBanner() {
-  const banner = document.createElement('div');  // Create a div element
-  banner.id = 'announcement-banner';  // Set the ID for the banner
+  const banner = document.createElement('div'); // Create the banner element
+  banner.id = 'announcement-banner'; // Set the ID
   banner.innerHTML = `
     <center>
       <b>Do you have suggestions?</b>
@@ -30,16 +30,17 @@ function showBanner() {
       </span>
     </center>
   `;
-  document.body.insertAdjacentElement('afterbegin', banner);  // Insert the banner into the DOM
+  document.body.insertAdjacentElement('afterbegin', banner); // Insert the banner into the DOM
 }
 
 function checkBanner() {
   const bannerClosed = getCookie('bannerClosed');
   if (bannerClosed !== 'true') {
-    showBanner();  // Only show the banner if it hasn't been closed
+    showBanner(); // Only show the banner if it hasn't been closed
   }
 }
 
+// Check the banner status on page load
 document.addEventListener('DOMContentLoaded', function () {
-  checkBanner();  // Check if the banner should be shown when the page loads
+  checkBanner();
 });
