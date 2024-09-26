@@ -1,51 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Announcement Banner</title>
-    <script>
-      // Function to set a cookie
-      function setCookie(name, value, days) {
-        const expires = new Date(Date.now() + days * 864e5).toUTCString();
-        document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
-      }
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+}
 
-      // Function to get a cookie
-      function getCookie(name) {
-        return document.cookie.split('; ').reduce((r, v) => {
-          const parts = v.split('=');
-          return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-        }, '');
-      }
+function getCookie(name) {
+  const cookies = document.cookie.split('; ').reduce((r, v) => {
+    const parts = v.split('=');
+    return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+  }, '');
+  return cookies;
+}
 
-      // Function to check if the banner should be displayed
-      function checkBanner() {
-        const bannerClosed = getCookie('bannerClosed');
-        if (bannerClosed === 'true') {
-          document.getElementById('announcement-banner').style.display = 'none';
-        }
-      }
+function closeBanner() {
+  setCookie('bannerClosed', 'true', 180);  // Set cookie for 180 days
+  document.getElementById('announcement-banner').remove();  // Remove the banner when closed
+}
 
-      // Function to close the banner
-      function closeBanner() {
-        setCookie('bannerClosed', 'true', 180); // Cookie will expire in 180 days (6 months)
-        document.getElementById('announcement-banner').style.display = 'none';
-      }
+function showBanner() {
+  const bannerHTML = `
+    <center id="announcement-banner">
+      <b>Do you have suggestions?</b>
+      <span style="float: right;">
+        <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
+      </span>
+    </center>
+  `;
+  document.body.insertAdjacentHTML('afterbegin', bannerHTML);  // Insert the banner into the DOM
+}
 
-      // Check banner status on page load
-      window.onload = checkBanner;
-    </script>
-</head>
-<body>
+function checkBanner() {
+  const bannerClosed = getCookie('bannerClosed');
+  if (bannerClosed !== 'true') {
+    showBanner();  // Only show the banner if it hasn't been closed
+  }
+}
 
-<div id="announcement-banner" style="background-color: #f4f4f4; padding: 15px; text-align: center; position: relative;">
-  <center>
-    <b>Do you have suggestions?</b>
-    <span style="float: right; cursor: pointer; padding: 0 10px; font-size: 18px; color: #555;" 
-          onclick="closeBanner();">&#10006;</span>
-  </center>
-</div>
-
-</body>
-</html>
+document.addEventListener('DOMContentLoaded', function () {
+  checkBanner();  // Check if the banner should be shown when the page loads
+});
