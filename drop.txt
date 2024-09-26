@@ -4,18 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Announcement Banner Example</title>
-    <style>
-        /* Optional: Style for the banner */
-        #announcement-banner {
-            position: fixed; /* Keep the banner at the top */
-            top: 0; /* Position it at the top */
-            width: 100%; /* Full width */
-            background-color: #f1c40f; /* Background color */
-            text-align: center; /* Center the text */
-            display: none; /* Initially hidden */
-            z-index: 1000; /* Ensure it appears above other content */
-        }
-    </style>
 </head>
 <body>
     <!-- Other content of your page -->
@@ -38,7 +26,7 @@
             setCookie('bannerClosed', 'true', 180); // Set cookie for 180 days
             const banner = document.getElementById('announcement-banner');
             if (banner) {
-                banner.style.display = 'none'; // Hide the banner instead of removing it
+                banner.style.display = 'none'; // Hide the banner
             }
         }
 
@@ -59,17 +47,23 @@
         // Create the banner element and set its inner HTML
         const banner = document.createElement('div'); // Create the banner element
         banner.id = 'announcement-banner'; // Set the ID
+        banner.style.display = 'none'; // Initially hide the banner
         banner.innerHTML = `
-            <b>Do you have suggestions?</b>
-            <span style="float: right;">
-                <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
-            </span>
+            <center>
+                <b>Do you have suggestions?</b>
+                <span style="float: right;">
+                    <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
+                </span>
+            </center>
         `;
-        document.body.insertAdjacentElement('afterbegin', banner); // Insert the banner into the DOM
+        
+        // Insert the banner into the body, targeting an appropriate location below the navbar
+        const targetElement = document.querySelector('body'); // Adjust this to target an appropriate container if necessary
+        targetElement.insertAdjacentElement('afterbegin', banner); // Insert the banner into the DOM
 
         // Check the banner status on page load
         document.addEventListener('DOMContentLoaded', function () {
-            checkBanner();
+            checkBanner(); // Check if the banner should be shown
         });
     </script>
 </body>
