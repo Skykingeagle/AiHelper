@@ -1,71 +1,51 @@
-const axios = require('axios');
-
-// Mock function to check document permissions using Confluence API
-async function checkPermissionForDocument(contentId, userId) {
-  const confluenceAPIUrl = `https://your-confluence-instance/rest/api/content/${contentId}/restriction/byOperation`;
-  const pat = 'your_personal_access_token';  // Replace with your PAT
-  
-  try {
-    const response = await axios.get(confluenceAPIUrl, {
-      headers: {
-        'Authorization': `Bearer ${pat}`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcement Banner</title>
+    <script>
+      // Function to set a cookie
+      function setCookie(name, value, days) {
+        const expires = new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
       }
-    });
-    
-    const { read } = response.data;
-    if (read && read.restrictions && read.restrictions.user && Array.isArray(read.restrictions.user.results)) {
-      // Check if the user is in the list of users with read permission
-      return read.restrictions.user.results.some(user => user.username === userId);
-    }
-    
-    return false; // Default to false if restrictions are not present
-  } catch (error) {
-    console.error(`Error checking permission for contentId ${contentId}:`, error.message);
-    return false; // Assume no permission if there's an error
-  }
-}
 
-router.get("/kbs/:id/search", async (req, res) => {
-  try {
-    const query = req.query.query;
-    let kb_id = req.params.id;
-
-    // Fetch knowledge base info
-    let kb = await queryDatabase('SELECT collection_id, collection_name, name FROM ama_nip_kb kb WHERE kb.ID = $(kb_id);');
-    kb = kb[0];
-
-    let collectionName = kb.collection_name + "_" + config.env;
-    let embeddingFunction = new NPCEmbedding();
-
-    const collection = await chroma.getCollection({
-      name: collectionName,
-      embeddingFunction: embeddingFunction,
-    });
-
-    // Query the collection
-    let response = await collection.query({ queryTexts: query, nResults: 10 });
-
-    let documents = [];
-
-    for (let i = 0; i < response["ids"][0].length; i++) {
-      let docId = response["ids"][0][i];
-
-      // Check if the user 'abc' has permission to view this document
-      let hasPermission = await checkPermissionForDocument(docId, 'abc');
-
-      if (hasPermission) {
-        documents.push({
-          id: docId,
-          metadata: response["metadatas"][0][i],
-          pageContent: response["documents"][0][i],
-        });
+      // Function to get a cookie
+      function getCookie(name) {
+        return document.cookie.split('; ').reduce((r, v) => {
+          const parts = v.split('=');
+          return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+        }, '');
       }
-    }
 
-    // Send only the documents that the user has permission to view
-    res.send(documents);
+      // Function to check if the banner should be displayed
+      function checkBanner() {
+        const bannerClosed = getCookie('bannerClosed');
+        if (bannerClosed === 'true') {
+          document.getElementById('announcement-banner').style.display = 'none';
+        }
+      }
 
-  } catch (e) {
-    res.status(500).send("Could not process the query");
-  }
-});
+      // Function to close the banner
+      function closeBanner() {
+        setCookie('bannerClosed', 'true', 180); // Cookie will expire in 180 days (6 months)
+        document.getElementById('announcement-banner').style.display = 'none';
+      }
+
+      // Check banner status on page load
+      window.onload = checkBanner;
+    </script>
+</head>
+<body>
+
+<div id="announcement-banner" style="background-color: #f4f4f4; padding: 15px; text-align: center; position: relative;">
+  <center>
+    <b>Do you have suggestions?</b>
+    <span style="float: right; cursor: pointer; padding: 0 10px; font-size: 18px; color: #555;" 
+          onclick="closeBanner();">&#10006;</span>
+  </center>
+</div>
+
+</body>
+</html>
