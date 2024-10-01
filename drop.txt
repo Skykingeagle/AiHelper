@@ -1,61 +1,127 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Announcement Banner Example</title>
-    <style>
-        #announcement-banner {
-            display: none; /* Hide the banner by default */
-        }
-    </style>
-</head>
-<body>
-    <!-- Your Jira navigation bar and other content -->
+return (
+  <div>
+    {/* Main Container for the Chat Interface */}
+    <Box
+      sx={{
+        height: '100vh', // Full-page height
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#f8f9fa', // Light background
+      }}
+    >
+      {/* Header Section */}
+      <Grid container spacing={2} sx={{ padding: '10px', backgroundColor: '#ff5f5f', color: 'white' }}>
+        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="subtitle1" sx={{ marginLeft: '45%' }}>
+            AI Bot Chat
+          </Typography>
+          {/* Fullscreen Button */}
+          {lisFullScreen ? (
+            <Fullscreen onClick={handleFullScreen} style={{ cursor: 'pointer' }} />
+          ) : (
+            <FullscreenExit onClick={handleFullScreen} style={{ cursor: 'pointer' }} />
+          )}
+        </Grid>
+      </Grid>
 
-    <div id="announcement-banner">
-        <center>
-            <b>Do you have suggestions?</b>
-            <span style="float: right;">
-                <b style="cursor: pointer; padding-left: 10px;" onclick="closeBanner()">&#10006;</b>
-            </span>
-        </center>
-    </div>
+      {/* Chat Messages Section */}
+      <Grid
+        item
+        xs={12}
+        ref={messageEl}
+        sx={{
+          height: '80%', // Takes 80% of the screen for messages
+          overflowY: 'auto', // Scrollable area for messages
+          padding: '10px',
+        }}
+      >
+        <AiMessages messages={messages} />
+        
+        {/* Conditional Rendering for Feedback Form */}
+        {messages.length > 1 && messages[messages.length - 1].role === Role.AI && IshowQaForm && IshowCommentForm && (
+          <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingTop: '15px' }}>
+            <Typography variant="subtitle2" sx={{ mr: '1rem' }}>Is this answer helpful?</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'row' }}>
+              <ThumbUpAlt color="primary" sx={{ mr: '0.5rem' }} onClick={handleGoodUserFeedback} style={{ cursor: 'pointer' }} fontSize="small" />
+              <ThumbDownAlt onClick={handleBadUserFeedback} color="primary" style={{ cursor: 'pointer' }} fontSize="small" />
+            </Box>
+          </Box>
+        )}
 
-    <script>
-        function setCookie(name, value, days) {
-            const expires = new Date(Date.now() + days * 864e5).toUTCString();
-            document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
-        }
+        {/* QA Form */}
+        {showQaForm && (
+          <form className={classes.formContainer} onSubmit={submitQaForm} style={{ padding: '5px' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '5px', alignItems: 'center' }}>
+              <ContactSupportOutlined />
+              <Typography variant="h5">Ask the Team</Typography>
+            </Box>
+            <Box sx={{ padding: '10px' }}>
+              <Label>Question</Label>
+              <TextField size="small" key="confluenceQsTitle" onChange={(e) => setConfluenceQsTitle(e.target.value)} sx={{ width: '50%' }} defaultValue={getLatestQuestion()} required fullWidth label="Your question" />
+              <Label>Description</Label>
+              <TextField size="small" fullWidth inputProps={{ style: { resize: 'both', height: '100px' } }} onChange={(e) => setConfluenceQsDescription(e.target.value)} multiline label="Details around your question" />
+              <Label>Labels</Label>
+              <SelectConfluenceTags labels={labelOptions} label={confluenceQsLabels} setLabel={setConfluenceQsLabels} />
+            </Box>
+            <Button type="submit" variant="outlined">Submit</Button>
+          </form>
+        )}
 
-        function getCookie(name) {
-            const cookies = document.cookie.split('; ').reduce((r, v) => {
-                const parts = v.split('=');
-                return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-            }, '');
-            return cookies;
-        }
+        {/* Comment Form */}
+        {showCommentForm && (
+          <form className={classes.formContainer} onSubmit={submitForm}>
+            <Typography variant="h5">Please provide feedback</Typography>
+            <TextField fullWidth placeholder="Type something here..." />
+            <Button type="submit" variant="outlined">Submit</Button>
+          </form>
+        )}
+      </Grid>
 
-        function closeBanner() {
-            setCookie('bannerClosed', 'true', 180); // Set cookie for 180 days
-            const banner = document.getElementById('announcement-banner');
-            if (banner) {
-                banner.style.display = 'none'; // Hide the banner
+      {/* Input Section */}
+      <Grid container sx={{ alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+        {showClearChat && messages.length > 1 ? (
+          <Button size="small" onClick={handleClearChat}>Clear Chat</Button>
+        ) : (
+          <></>
+        )}
+      </Grid>
+
+      {/* Typing Indicator */}
+      {botThinking ? (
+        <Typography variant="overline" sx={{ width: '100%', textAlign: 'center' }}>
+          Thinking...
+          <LinearProgress />
+        </Typography>
+      ) : (
+        <></>
+      )}
+
+      {/* Message Input Box */}
+      <Box
+        sx={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          padding: '10px',
+        }}
+      >
+        <TextField
+          fullWidth
+          disabled={chatDisabled}
+          placeholder="Type something here..."
+          aria-label="Message"
+          value={textAreaValue}
+          onChange={(e) => setTextAreaValue(e.target.value)}
+          onKeyDownCapture={(event) => {
+            if (event.key === 'Enter') {
+              handleClick();
             }
-        }
-
-        function checkBanner() {
-            const bannerClosed = getCookie('bannerClosed');
-            const banner = document.getElementById('announcement-banner');
-            if (bannerClosed !== 'true') {
-                banner.style.display = 'block'; // Show the banner if it hasn't been closed
-            }
-        }
-
-        // Check the banner status when the page loads
-        document.addEventListener('DOMContentLoaded', function () {
-            checkBanner(); // Check if the banner should be shown
-        });
-    </script>
-</body>
-</html>
+          }}
+        />
+        <IconButton color="primary" sx={{ alignSelf: 'center', borderRadius: '50%', paddingLeft: '15px' }} onClick={handleClick}>
+          <SendRounded />
+        </IconButton>
+      </Box>
+    </Box>
+  </div>
+);
