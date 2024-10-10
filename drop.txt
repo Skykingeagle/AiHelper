@@ -1,25 +1,37 @@
-import { Box } from '@mui/material';
+export async function chat(
+  prompt: string,
+  sourceArray: string[]
+): Promise<any> {
+  try {
+    // Fetch data from the API with POST request
+    const response_from_api = await fetch(botUrl + "/fetch_from_links", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sourceArray, prompt }),
+    });
 
-<Box
-  sx={{
-    width: '300px', // Adjust based on your layout
-    height: '500px', // Adjust the height for scrolling
-    backgroundColor: '#f4f4f4', // Box background color
-    overflowY: 'auto', // Enable vertical scrolling
-    '::-webkit-scrollbar': {
-      width: '8px', // Scrollbar width
-    },
-    '::-webkit-scrollbar-thumb': {
-      backgroundColor: '#888', // Scrollbar color
-      borderRadius: '10px', // Rounded scrollbar for a smoother look
-    },
-    '::-webkit-scrollbar-thumb:hover': {
-      backgroundColor: '#555', // Darker color on hover
-    },
-    '::-webkit-scrollbar-track': {
-      backgroundColor: '#e0e0e0', // Scrollbar track color
-    },
-  }}
->
-  {/* Chat content goes here */}
-</Box>
+    // Check if the response is OK (status in the range 200-299)
+    if (!response_from_api.ok) {
+      throw new Error("Network response was not ok: " + response_from_api.statusText);
+    }
+
+    // Parse the JSON response
+    const data = await response_from_api.json();
+
+    // Check if the response contains the expected success status
+    if (data.success && data.data && data.data.status === 'SUCCESS') {
+      const responseData = data.data.response; // Assuming the response structure
+      console.log(responseData);
+      return responseData; // Return the successful response
+    } else {
+      // Handle case where the API response indicates failure
+      throw new Error("API response indicates failure");
+    }
+  } catch (e) {
+    console.log(e);
+    return { response: "Sorry I could not fulfill your request.. try again." };
+  }
+}
