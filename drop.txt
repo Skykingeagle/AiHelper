@@ -1,1 +1,2 @@
-GET https://your-instance.atlassian.net/rest/api/content/search?limit=200&start=0&cql=space=%22DOCS%22%20AND%20type=page&expand=body.view,history,metadata.labels
+
+GET /wiki/rest/api/content?spaceKey=SPACE_KEY&type=page&start=50&limit=50&expand=metadata.labels
