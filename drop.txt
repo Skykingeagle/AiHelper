@@ -1,2 +1,39 @@
+async function fetchAllConfluencePages(spaceKey, tag_name) {
+    console.log("Starting page fetch from fetchAllPages");
 
-GET /wiki/rest/api/content?spaceKey=SPACE_KEY&type=page&start=50&limit=50&expand=metadata.labels
+    let pageCount = await getPageCount(spaceKey, tag_name);
+    console.log("Page count: ", pageCount);
+
+    let pages = [];
+    let requests = [];
+
+    for (let i = 0; i < pageCount; i += dynamicBatchSize) {
+        requests = []; // Initialize requests for this batch
+
+        // Calculate how many pages to fetch in this batch
+        let batchEnd = Math.min(i + dynamicBatchSize, pageCount);
+        
+        for (let j = i; j < batchEnd; j++) { // Use 'j' to iterate over pages without duplication
+            requests.push(
+                fetchWithRetry(tag_name ? fetchConfluenceDataBatch : fetchAllConfluenceDataBatch, [j, spaceKey, tag_name])
+            );
+        }
+
+        let data = await Promise.all(requests); // Wait for this batch to complete
+
+        // Process the fetched data to handle nested results
+        for (let page of data) {
+            // Check if the page has children and flatten them if necessary
+            if (page && page.results) {
+                pages = pages.concat(page.results);
+                
+                // If the page has children, process them
+                if (page.results.children && page.results.children.length > 0) {
+                    pages = pages.concat(page.results.children); // Adjust this based on how children are structured
+                }
+            }
+        }
+    }
+
+    return pages; // Return the accumulated pages
+}
