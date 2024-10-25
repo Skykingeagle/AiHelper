@@ -1,39 +1,79 @@
-async function fetchAllConfluencePages(spaceKey, tag_name) {
-    console.log("Starting page fetch from fetchAllPages");
+const axios = require("axios");
+const TurndownService = require("turndown");
+const turndownService = new TurndownService();
 
-    let pageCount = await getPageCount(spaceKey, tag_name);
-    console.log("Page count: ", pageCount);
-
-    let pages = [];
-    let requests = [];
-
-    for (let i = 0; i < pageCount; i += dynamicBatchSize) {
-        requests = []; // Initialize requests for this batch
-
-        // Calculate how many pages to fetch in this batch
-        let batchEnd = Math.min(i + dynamicBatchSize, pageCount);
-        
-        for (let j = i; j < batchEnd; j++) { // Use 'j' to iterate over pages without duplication
-            requests.push(
-                fetchWithRetry(tag_name ? fetchConfluenceDataBatch : fetchAllConfluenceDataBatch, [j, spaceKey, tag_name])
-            );
-        }
-
-        let data = await Promise.all(requests); // Wait for this batch to complete
-
-        // Process the fetched data to handle nested results
-        for (let page of data) {
-            // Check if the page has children and flatten them if necessary
-            if (page && page.results) {
-                pages = pages.concat(page.results);
-                
-                // If the page has children, process them
-                if (page.results.children && page.results.children.length > 0) {
-                    pages = pages.concat(page.results.children); // Adjust this based on how children are structured
-                }
-            }
+// Function to fetch a batch of pages with retries and dynamic batch sizing
+async function fetchWithRetry(fetchFunction, args, retries = 2, delay = 500) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fetchFunction(...args);
+        } catch (error) {
+            console.warn(`Attempt ${i + 1} failed. Retrying...`);
+            await new Promise(resolve => setTimeout(resolve, delay * (i + 1))); // Exponential backoff
         }
     }
+    console.error("All retry attempts failed.");
+    return null;
+}
 
-    return pages; // Return the accumulated pages
+// Dynamically fetch all Confluence pages with processing
+async function fetchAllConfluencePages(spaceKey, tag_name) {
+    try {
+        console.log("Starting page fetch from fetchAllConfluencePages");
+
+        // Get page count
+        let pageCount = await getPageCount(spaceKey, tag_name);
+        console.log("Page count:", pageCount);
+
+        let pages = [];
+        let dynamicBatchSize = 50; // Start with a larger batch size
+
+        for (let i = 0; i < pageCount; i += dynamicBatchSize) {
+            let requests = [];
+
+            // Fetch each batch within dynamic batch size limit
+            for (let j = 0; j < dynamicBatchSize && i + j * 50 < pageCount; j++) {
+                let startAt = i + j * 50;
+                requests.push(
+                    fetchWithRetry(tag_name ? fetchConfluenceDataBatch : fetchAllConfluenceDataBatch, [startAt, spaceKey, tag_name])
+                );
+            }
+            const data = await Promise.all(requests);
+
+            // Process and filter out failed requests (null responses)
+            for (let batch of data) {
+                if (batch && batch.results) {
+                    for (let page of batch.results) {
+                        // Process each page as it arrives
+                        if (page.body && page.body.view) {
+                            try {
+                                page.pageContent = turndownService.turndown(page.body.view.value);
+                            } catch (error) {
+                                console.error(`Error converting page ${page.id} content: ${error.message}`);
+                                page.pageContent = ""; // Default to empty if conversion fails
+                            }
+                        } else {
+                            page.pageContent = ""; // Default if no body view
+                        }
+                        pages.push(page);
+                    }
+                } else {
+                    console.warn("Received null or empty batch, skipping.");
+                }
+            }
+
+            // Adjust batch size if errors are frequent
+            if (requests.length < dynamicBatchSize) {
+                dynamicBatchSize = Math.max(10, Math.floor(dynamicBatchSize / 2));
+                console.log(`Reducing batch size to ${dynamicBatchSize} due to frequent errors.`);
+            }
+
+            console.log(`Fetched ${pages.length} pages so far...`);
+        }
+
+        return pages;
+    } catch (error) {
+        console.error("Error in fetchAllConfluencePages:", error);
+        throw error;
+    }
 }
