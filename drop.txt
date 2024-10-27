@@ -3,7 +3,7 @@ const TurndownService = require("turndown");
 const turndownService = new TurndownService();
 
 // Function to fetch a batch of pages with retries and dynamic batch sizing
-async function fetchWithRetry(fetchFunction, args, retries = 2, delay = 500) {
+async function fetchWithRetry(fetchFunction, args, retries = 3, delay = 500) {
     for (let i = 0; i < retries; i++) {
         try {
             return await fetchFunction(...args);
@@ -16,12 +16,12 @@ async function fetchWithRetry(fetchFunction, args, retries = 2, delay = 500) {
     return null;
 }
 
-// Dynamically fetch all Confluence pages with processing
+// Main function to dynamically fetch all Confluence pages with processing
 async function fetchAllConfluencePages(spaceKey, tag_name) {
     try {
         console.log("Starting page fetch from fetchAllConfluencePages");
 
-        // Get page count
+        // Get total page count
         let pageCount = await getPageCount(spaceKey, tag_name);
         console.log("Page count:", pageCount);
 
@@ -38,16 +38,18 @@ async function fetchAllConfluencePages(spaceKey, tag_name) {
                     fetchWithRetry(tag_name ? fetchConfluenceDataBatch : fetchAllConfluenceDataBatch, [startAt, spaceKey, tag_name])
                 );
             }
+
+            // Wait for the batch to complete
             const data = await Promise.all(requests);
 
-            // Process and filter out failed requests (null responses)
+            // Process each batch's results
             for (let batch of data) {
                 if (batch && batch.results) {
                     for (let page of batch.results) {
-                        // Process each page as it arrives
+                        // Check if the page has content to process
                         if (page.body && page.body.view) {
                             try {
-                                page.pageContent = turndownService.turndown(page.body.view.value);
+                                page.pageContent = turndownService.turndown(page.body.view.value); // Convert HTML to Markdown
                             } catch (error) {
                                 console.error(`Error converting page ${page.id} content: ${error.message}`);
                                 page.pageContent = ""; // Default to empty if conversion fails
