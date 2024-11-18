@@ -1,8 +1,14 @@
-const flattenData = (data: Tag[]) => {
-  return data.map(item => ({
-    id: item.id,
-    created_by_user: item.metadata.created_by_user,
-    created_on: item.metadata.created_on,
-    // Add more fields as needed
-  }));
-};
+const [rows, setRows] = useState([]);
+
+useEffect(() => {
+  getKBTags(props.kb.ID).then((tags) => {
+    // Flatten the data directly here
+    const flattenedData = tags.map(item => ({
+      id: item.id,  // Assuming id is at the top level
+      created_by_user: item.metadata.created_by_user,
+      created_on: item.metadata.created_on,
+      // Add any other necessary fields from `metadata` or elsewhere
+    }));
+    setRows(flattenedData);
+  });
+}, [props.kb.ID]);
