@@ -1,14 +1,64 @@
-const [rows, setRows] = useState([]);
+import React from 'react';
+import { DataGrid, GridColDef, GridCsvExportOptions } from '@mui/x-data-grid';
 
-useEffect(() => {
-  getKBTags(props.kb.ID).then((tags) => {
-    // Flatten the data directly here
-    const flattenedData = tags.map(item => ({
-      id: item.id,  // Assuming id is at the top level
-      created_by_user: item.metadata.created_by_user,
-      created_on: item.metadata.created_on,
-      // Add any other necessary fields from `metadata` or elsewhere
-    }));
-    setRows(flattenedData);
-  });
-}, [props.kb.ID]);
+// Define the columns for the DataGrid
+const columns: GridColDef[] = [
+  { field: 'id', headerName: 'ID', width: 150 },
+  { field: 'created_by_user', headerName: 'Created By User', width: 200 },
+  { field: 'created_on', headerName: 'Created On', width: 180, valueFormatter: (params) => new Date(params.value).toLocaleDateString() },
+  // Add more columns here as needed
+];
+
+// Sample rows data
+const rows = [
+  { id: '1', created_by_user: 'User1', created_on: '2024-01-01' },
+  { id: '2', created_by_user: 'User2', created_on: '2024-01-02' },
+  // Add more rows here as needed
+];
+
+const MyComponent = () => {
+  const gridApi = React.useRef(null);
+
+  // Custom export function
+  const handleExport = () => {
+    const options: GridCsvExportOptions = {
+      // Add title or header in CSV
+      getColumnHeaders: (columns) => {
+        return columns.map((col) => ({
+          value: col.headerName,
+          style: { fontWeight: 'bold', fontSize: '14px' }, // Make headers bold
+        }));
+      },
+      // Customize row data formatting
+      processRow: (row) => {
+        return Object.keys(row).reduce((acc, key) => {
+          let value = row[key];
+          // Custom date formatting
+          if (key === 'created_on' && value) {
+            value = new Date(value).toLocaleDateString(); // Format date
+          }
+          // Additional formatting logic can go here (currency, percentages, etc.)
+          acc[key] = value;
+          return acc;
+        }, {});
+      },
+    };
+
+    // Trigger the CSV export with the customized options
+    gridApi.current.exportDataAsCsv(options);
+  };
+
+  return (
+    <div>
+      <DataGrid
+        columns={columns}
+        rows={rows}
+        pageSize={5}
+        ref={gridApi}
+      />
+      <button onClick={handleExport}>Export CSV</button>
+    </div>
+  );
+};
+
+export default MyComponent;
