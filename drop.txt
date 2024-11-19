@@ -144,6 +144,7 @@ export default function SearchResult(props: { results: SearchResultInterface[] }
 ----------------------------
 
 import React from "react";
+import { Pagination as MUIPagination } from "@mui/material";
 
 const Pagination = ({
   totalResults,
@@ -158,46 +159,20 @@ const Pagination = ({
 }) => {
   const totalPages = Math.ceil(totalResults / resultsPerPage);
 
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      onPageChange(currentPage + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentPage > 1) {
-      onPageChange(currentPage - 1);
-    }
+  const handleChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    onPageChange(value);
   };
 
   return (
     <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
-      <button
-        onClick={handlePrevious}
-        disabled={currentPage === 1}
-        style={{ marginRight: "10px" }}
-      >
-        Previous
-      </button>
-      {Array.from({ length: totalPages }, (_, index) => (
-        <button
-          key={index}
-          onClick={() => onPageChange(index + 1)}
-          style={{
-            margin: "0 5px",
-            fontWeight: currentPage === index + 1 ? "bold" : "normal",
-          }}
-        >
-          {index + 1}
-        </button>
-      ))}
-      <button
-        onClick={handleNext}
-        disabled={currentPage === totalPages}
-        style={{ marginLeft: "10px" }}
-      >
-        Next
-      </button>
+      <MUIPagination
+        count={totalPages}
+        page={currentPage}
+        onChange={handleChange}
+        variant="outlined"
+        shape="rounded"
+        color="primary"
+      />
     </div>
   );
 };
