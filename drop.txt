@@ -1,64 +1,205 @@
-import React from 'react';
-import { DataGrid, GridColDef, GridCsvExportOptions } from '@mui/x-data-grid';
+import React, { useState, useEffect } from "react";
+import { useParams, useLocation } from "react-router-dom";
+import { TextField, IconButton, CircularProgress, Typography } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import SearchResult from "./SearchResult"; // Assuming the SearchResult component is in the same directory
+import Pagination from "./Pagination"; // New Pagination component
 
-// Define the columns for the DataGrid
-const columns: GridColDef[] = [
-  { field: 'id', headerName: 'ID', width: 150 },
-  { field: 'created_by_user', headerName: 'Created By User', width: 200 },
-  { field: 'created_on', headerName: 'Created On', width: 180, valueFormatter: (params) => new Date(params.value).toLocaleDateString() },
-  // Add more columns here as needed
-];
+export default function KnowledgeBaseSearch() {
+  const params = useParams();
+  const id = params.kbId;
+  const loc = useLocation();
 
-// Sample rows data
-const rows = [
-  { id: '1', created_by_user: 'User1', created_on: '2024-01-01' },
-  { id: '2', created_by_user: 'User2', created_on: '2024-01-02' },
-  // Add more rows here as needed
-];
+  console.log(loc);
+  console.log(params);
 
-const MyComponent = () => {
-  const gridApi = React.useRef(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [data, setData] = useState<SearchResultInterface[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const resultsPerPage = 10; // Number of results per page
 
-  // Custom export function
-  const handleExport = () => {
-    const options: GridCsvExportOptions = {
-      // Add title or header in CSV
-      getColumnHeaders: (columns) => {
-        return columns.map((col) => ({
-          value: col.headerName,
-          style: { fontWeight: 'bold', fontSize: '14px' }, // Make headers bold
-        }));
-      },
-      // Customize row data formatting
-      processRow: (row) => {
-        return Object.keys(row).reduce((acc, key) => {
-          let value = row[key];
-          // Custom date formatting
-          if (key === 'created_on' && value) {
-            value = new Date(value).toLocaleDateString(); // Format date
-          }
-          // Additional formatting logic can go here (currency, percentages, etc.)
-          acc[key] = value;
-          return acc;
-        }, {});
-      },
-    };
+  const submitQuery = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const query = (e.target as HTMLFormElement)[0].value;
+    setSearchQuery(query);
+  };
 
-    // Trigger the CSV export with the customized options
-    gridApi.current.exportDataAsCsv(options);
+  useEffect(() => {
+    if (searchQuery !== "") {
+      searchKb(searchQuery, id as string).then((res) => {
+        const uniqueDocs = DocumentsFilter(res); // Assuming DocumentsFilter filters duplicates
+        setData(uniqueDocs);
+        setLoading(false);
+      });
+    }
+  }, [searchQuery]);
+
+  // Pagination logic
+  const indexOfLastResult = currentPage * resultsPerPage;
+  const indexOfFirstResult = indexOfLastResult - resultsPerPage;
+  const paginatedResults = data.slice(indexOfFirstResult, indexOfLastResult);
+
+  const SearchBar = () => (
+    <form style={{ display: "flex" }} onSubmit={submitQuery}>
+      <TextField
+        id="search-bar"
+        className="text"
+        label="Query your knowledge base"
+        variant="outlined"
+        placeholder="Search..."
+        fullWidth
+      />
+      <IconButton type="submit" aria-label="search">
+        <SearchIcon style={{ fill: "blue" }} />
+      </IconButton>
+    </form>
+  );
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignSelf: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        padding: 20,
+        width: "100%",
+      }}
+    >
+      <SearchBar />
+      {loading ? (
+        <CircularProgress
+          style={{
+            display: "flex",
+            alignSelf: "center",
+            padding: "20px",
+          }}
+          size={50}
+        />
+      ) : (
+        <>
+          <div style={{ padding: 33 }}>
+            <SearchResult results={paginatedResults} />
+          </div>
+          {!loading && data.length > resultsPerPage && (
+            <Pagination
+              totalResults={data.length}
+              resultsPerPage={resultsPerPage}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+
+--------------------
+
+
+import React from "react";
+import { Typography } from "@mui/material";
+
+export default function SearchResult(props: { results: SearchResultInterface[] }) {
+  return (
+    <div className="search-result">
+      <div className="search-info">
+        About {props.results.length} results ((0.1 seconds))
+      </div>
+      {props.results.map((item, index) => (
+        <div key={index} className="search-item">
+          <div className="item-header">
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${item.metadata.source}`}
+              alt="Site icon"
+              className="item-icon"
+            />
+            <Typography variant="caption" className="item-url">
+              {item.metadata.source}
+            </Typography>
+          </div>
+          <Typography variant="h5" className="item-title">
+            <a
+              href={item.metadata.source}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {item.metadata.title}
+            </a>
+          </Typography>
+          <div className="item-snippet">{item.pageContent}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+----------------------------
+
+import React from "react";
+
+const Pagination = ({
+  totalResults,
+  resultsPerPage,
+  currentPage,
+  onPageChange,
+}: {
+  totalResults: number;
+  resultsPerPage: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+}) => {
+  const totalPages = Math.ceil(totalResults / resultsPerPage);
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      onPageChange(currentPage + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
   };
 
   return (
-    <div>
-      <DataGrid
-        columns={columns}
-        rows={rows}
-        pageSize={5}
-        ref={gridApi}
-      />
-      <button onClick={handleExport}>Export CSV</button>
+    <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
+      <button
+        onClick={handlePrevious}
+        disabled={currentPage === 1}
+        style={{ marginRight: "10px" }}
+      >
+        Previous
+      </button>
+      {Array.from({ length: totalPages }, (_, index) => (
+        <button
+          key={index}
+          onClick={() => onPageChange(index + 1)}
+          style={{
+            margin: "0 5px",
+            fontWeight: currentPage === index + 1 ? "bold" : "normal",
+          }}
+        >
+          {index + 1}
+        </button>
+      ))}
+      <button
+        onClick={handleNext}
+        disabled={currentPage === totalPages}
+        style={{ marginLeft: "10px" }}
+      >
+        Next
+      </button>
     </div>
   );
 };
 
-export default MyComponent;
+export default Pagination;
