@@ -1,180 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
-import { TextField, IconButton, CircularProgress, Typography } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import SearchResult from "./SearchResult"; // Assuming the SearchResult component is in the same directory
-import Pagination from "./Pagination"; // New Pagination component
 
-export default function KnowledgeBaseSearch() {
-  const params = useParams();
-  const id = params.kbId;
-  const loc = useLocation();
+import React from "react";
+import { useNavigation } from "react-router-dom";
+import Backdrop from "@mui/material/Backdrop";
+import CircularProgress from "@mui/material/CircularProgress";
 
-  console.log(loc);
-  console.log(params);
+export const NavigationBackdrop: React.FC = () => {
+  const navigation = useNavigation();
 
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [data, setData] = useState<SearchResultInterface[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const resultsPerPage = 10; // Number of results per page
-
-  const submitQuery = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const query = (e.target as HTMLFormElement)[0].value;
-    setSearchQuery(query);
-  };
-
-  useEffect(() => {
-    if (searchQuery !== "") {
-      searchKb(searchQuery, id as string).then((res) => {
-        const uniqueDocs = DocumentsFilter(res); // Assuming DocumentsFilter filters duplicates
-        setData(uniqueDocs);
-        setLoading(false);
-      });
-    }
-  }, [searchQuery]);
-
-  // Pagination logic
-  const indexOfLastResult = currentPage * resultsPerPage;
-  const indexOfFirstResult = indexOfLastResult - resultsPerPage;
-  const paginatedResults = data.slice(indexOfFirstResult, indexOfLastResult);
-
-  const SearchBar = () => (
-    <form style={{ display: "flex" }} onSubmit={submitQuery}>
-      <TextField
-        id="search-bar"
-        className="text"
-        label="Query your knowledge base"
-        variant="outlined"
-        placeholder="Search..."
-        fullWidth
-      />
-      <IconButton type="submit" aria-label="search">
-        <SearchIcon style={{ fill: "blue" }} />
-      </IconButton>
-    </form>
-  );
+  const isNavigating = navigation.state === "loading"; // Detect when navigation is in progress
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignSelf: "center",
-        justifyContent: "center",
-        flexDirection: "column",
-        padding: 20,
-        width: "100%",
-      }}
+    <Backdrop
+      sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      open={isNavigating} // Show backdrop if navigation is loading
     >
-      <SearchBar />
-      {loading ? (
-        <CircularProgress
-          style={{
-            display: "flex",
-            alignSelf: "center",
-            padding: "20px",
-          }}
-          size={50}
-        />
-      ) : (
-        <>
-          <div style={{ padding: 33 }}>
-            <SearchResult results={paginatedResults} />
-          </div>
-          {!loading && data.length > resultsPerPage && (
-            <Pagination
-              totalResults={data.length}
-              resultsPerPage={resultsPerPage}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-            />
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-
-
---------------------
-
-
-import React from "react";
-import { Typography } from "@mui/material";
-
-export default function SearchResult(props: { results: SearchResultInterface[] }) {
-  return (
-    <div className="search-result">
-      <div className="search-info">
-        About {props.results.length} results ((0.1 seconds))
-      </div>
-      {props.results.map((item, index) => (
-        <div key={index} className="search-item">
-          <div className="item-header">
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${item.metadata.source}`}
-              alt="Site icon"
-              className="item-icon"
-            />
-            <Typography variant="caption" className="item-url">
-              {item.metadata.source}
-            </Typography>
-          </div>
-          <Typography variant="h5" className="item-title">
-            <a
-              href={item.metadata.source}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {item.metadata.title}
-            </a>
-          </Typography>
-          <div className="item-snippet">{item.pageContent}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-
-
-----------------------------
-
-import React from "react";
-import { Pagination as MUIPagination } from "@mui/material";
-
-const Pagination = ({
-  totalResults,
-  resultsPerPage,
-  currentPage,
-  onPageChange,
-}: {
-  totalResults: number;
-  resultsPerPage: number;
-  currentPage: number;
-  onPageChange: (page: number) => void;
-}) => {
-  const totalPages = Math.ceil(totalResults / resultsPerPage);
-
-  const handleChange = (event: React.ChangeEvent<unknown>, value: number) => {
-    onPageChange(value);
-  };
-
-  return (
-    <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
-      <MUIPagination
-        count={totalPages}
-        page={currentPage}
-        onChange={handleChange}
-        variant="outlined"
-        shape="rounded"
-        color="primary"
-      />
-    </div>
+      <CircularProgress color="inherit" />
+    </Backdrop>
   );
 };
-
-export default Pagination;
