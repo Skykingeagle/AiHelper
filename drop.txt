@@ -1,94 +1,37 @@
-import React, { useState, useEffect } from "react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { ThemeProvider } from "@mui/material/styles";
+import React from "react";
+import { useNavigate, useNavigation } from "react-router-dom";
 import Backdrop from "@mui/material/Backdrop";
 import CircularProgress from "@mui/material/CircularProgress";
-import theme from "./theme";
-import Root from "./Root";
-import ErrorPage from "./ErrorPage";
-import KnowledgeBaseView from "./KnowledgeBaseView";
-import KnowledgeBasePage from "./KnowledgeBasePage";
-import KnowledgeBaseOverview from "./KnowledgeBaseOverview";
-import KnowledgeBaseSearch from "./KnowledgeBaseSearch";
-import KnowledgeBaseAiChat from "./KnowledgeBaseAiChat";
 
-const router = createBrowserRouter([
-  {
-    path: "",
-    element: <div>Redirecting to home...</div>,
-    errorElement: <ErrorPage />,
-  },
-  {
-    path: `/${BASE_URL}`,
-    element: <Root />,
-    errorElement: <ErrorPage />,
-    children: [
-      {
-        path: `/${BASE_URL}`,
-        element: <KnowledgeBaseView />,
-        errorElement: <ErrorPage />,
-      },
-      {
-        path: `/${BASE_URL}/kbs/:kbId`,
-        element: <KnowledgeBasePage />,
-        errorElement: <ErrorPage />,
-        children: [
-          {
-            path: `/${BASE_URL}/kbs/:kbId`,
-            element: <KnowledgeBaseOverview />,
-            errorElement: <ErrorPage />,
-          },
-          {
-            path: `/${BASE_URL}/kbs/:kbId/search`,
-            element: <KnowledgeBaseSearch />,
-            errorElement: <ErrorPage />,
-          },
-          {
-            path: `/${BASE_URL}/kbs/:kbId/aichat`,
-            element: <KnowledgeBaseAiChat />,
-            errorElement: <ErrorPage />,
-          },
-        ],
-      },
-    ],
-  },
-]);
+export default function KnowledgeBasePage() {
+  const navigate = useNavigate();
+  const navigation = useNavigation();
+  const [backdropOpen, setBackdropOpen] = React.useState(false);
 
-export default function App() {
-  // State to track if navigation is loading
-  const [loading, setLoading] = useState(false);
+  React.useEffect(() => {
+    if (navigation.state === "loading") {
+      setBackdropOpen(true); // Keep backdrop open during navigation
+    } else if (navigation.state === "idle") {
+      setBackdropOpen(false); // Close backdrop after navigation completes
+    }
+  }, [navigation.state]);
 
-  useEffect(() => {
-    const handleNavigationStart = () => setLoading(true);
-    const handleNavigationEnd = () => setLoading(false);
-
-    // Subscribe to navigation events
-    router.subscribe((event) => {
-      if (event.type === "navigation-start") {
-        handleNavigationStart();
-      } else if (event.type === "navigation-end") {
-        handleNavigationEnd();
-      }
-    });
-
-    // Cleanup subscription
-    return () => {
-      router.unsubscribe();
-    };
-  }, []);
+  const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, to: string) => {
+    event.preventDefault(); // Prevent default navigation
+    setBackdropOpen(true); // Show backdrop
+    navigate(to); // Programmatically navigate after showing the backdrop
+  };
 
   return (
-    <React.StrictMode>
-      <ThemeProvider theme={theme}>
-        {/* Backdrop to indicate loading */}
-        <Backdrop
-          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={loading}
-        >
-          <CircularProgress color="inherit" />
-        </Backdrop>
-        <RouterProvider router={router} />
-      </ThemeProvider>
-    </React.StrictMode>
+    <div>
+      <h1>Knowledge Base Page</h1>
+      {/* Example Link */}
+      <a href="/some-other-page" onClick={(e) => handleLinkClick(e, "/some-other-page")}>
+        Go to Some Other Page
+      </a>
+      <Backdrop open={backdropOpen} style={{ zIndex: 1000 }}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    </div>
   );
 }
