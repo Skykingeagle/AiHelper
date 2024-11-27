@@ -1,62 +1,111 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import IconButton from "@mui/material/IconButton";
+import SearchIcon from "@mui/icons-material/Search";
+import TextField from "@mui/material/TextField";
+import CircularProgress from "@mui/material/CircularProgress";
+import SearchResult from "../components/ui/SearchResult";
+import SearchResultInterface from "../components/interfaces/KbDocument";
+import { searchKb } from "../services/KnowledgeBaseService";
+import { useLocation, useNavigate } from "react-router-dom";
+import { DocumentsFilter } from "../utilities/DocumentsFilter";
+import Pagination from "../components/ui/Pagination";
 
-const SearchPage: React.FC = () => {
-  const [query, setQuery] = useState<string>("");
-  const [results, setResults] = useState<any[]>([]);
-  const navigate = useNavigate();
+export default function KnowledgeBaseSearch() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Function to fetch search results
-  const fetchResults = async (searchQuery: string) => {
-    try {
-      const response = await fetch(`/api/search?q=${searchQuery}`);
-      const data = await response.json();
-      setResults(data.results); // Assuming API returns results in `data.results`
-    } catch (error) {
-      console.error("Error fetching search results:", error);
-    }
+  // States
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [data, setData] = useState<SearchResultInterface[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  const resultsPerPage = 5; // Number of results per page
+
+  // Function to handle search submission
+  const submitQuery = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = (e.target as HTMLFormElement)[0].value;
+    if (!query) return;
+
+    // Update the URL with the search query
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+    setSearchQuery(query);
   };
 
-  // Update URL and fetch results when the user searches
-  const handleSearch = () => {
-    navigate(`/search?q=${query}`);
-    fetchResults(query);
+  // Fetch results based on search query
+  const fetchResults = (query: string) => {
+    setLoading(true);
+    searchKb(query).then((res) => {
+      const uniqueDocs = DocumentsFilter(res);
+      setData(uniqueDocs);
+      setLoading(false);
+    });
   };
 
-  // Extract query from URL on component mount
+  // Handle URL query string on component mount or URL change
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const searchQuery = params.get("q");
-    if (searchQuery) {
-      setQuery(searchQuery);
-      fetchResults(searchQuery);
+    const queryFromUrl = params.get("q");
+    if (queryFromUrl) {
+      setSearchQuery(queryFromUrl);
+      fetchResults(queryFromUrl);
     }
   }, [location.search]);
 
-  return (
-    <div>
-      <h1>Search Page</h1>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+  // Pagination logic
+  const indexOfLastResult = currentPage * resultsPerPage;
+  const indexOfFirstResult = indexOfLastResult - resultsPerPage;
+  const paginatedResults = data.slice(indexOfFirstResult, indexOfLastResult);
+
+  // Search bar component
+  const SearchBar = () => (
+    <form style={{ display: "flex" }} onSubmit={submitQuery}>
+      <TextField
+        id="search-bar"
+        className="text"
+        defaultValue={searchQuery} // Prefill with query from URL
+        label="Query your knowledge base"
+        variant="outlined"
         placeholder="Search..."
+        fullWidth
       />
-      <button onClick={handleSearch}>Search</button>
-      <div>
-        {results.length > 0 ? (
-          <ul>
-            {results.map((result, index) => (
-              <li key={index}>{result.title}</li> // Adjust based on your result structure
-            ))}
-          </ul>
-        ) : (
-          <p>No results found</p>
-        )}
-      </div>
+      <IconButton type="submit" aria-label="search">
+        <SearchIcon style={{ fill: "blue" }} />
+      </IconButton>
+    </form>
+  );
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignSelf: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        padding: 20,
+        width: "100%",
+      }}
+    >
+      <SearchBar />
+      {loading ? (
+        <CircularProgress
+          style={{ display: "flex", alignSelf: "center", padding: "20px" }}
+          size={50}
+        />
+      ) : (
+        <div style={{ padding: 3 }}>
+          <SearchResult results={paginatedResults} />
+          {!loading && data.length > resultsPerPage && (
+            <Pagination
+              totalResults={data.length}
+              resultsPerPage={resultsPerPage}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
-};
-
-export default SearchPage;
+}
