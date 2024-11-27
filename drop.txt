@@ -1,37 +1,62 @@
-import React from "react";
-import { useNavigate, useNavigation } from "react-router-dom";
-import Backdrop from "@mui/material/Backdrop";
-import CircularProgress from "@mui/material/CircularProgress";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
-export default function KnowledgeBasePage() {
+const SearchPage: React.FC = () => {
+  const [query, setQuery] = useState<string>("");
+  const [results, setResults] = useState<any[]>([]);
   const navigate = useNavigate();
-  const navigation = useNavigation();
-  const [backdropOpen, setBackdropOpen] = React.useState(false);
+  const location = useLocation();
 
-  React.useEffect(() => {
-    if (navigation.state === "loading") {
-      setBackdropOpen(true); // Keep backdrop open during navigation
-    } else if (navigation.state === "idle") {
-      setBackdropOpen(false); // Close backdrop after navigation completes
+  // Function to fetch search results
+  const fetchResults = async (searchQuery: string) => {
+    try {
+      const response = await fetch(`/api/search?q=${searchQuery}`);
+      const data = await response.json();
+      setResults(data.results); // Assuming API returns results in `data.results`
+    } catch (error) {
+      console.error("Error fetching search results:", error);
     }
-  }, [navigation.state]);
-
-  const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, to: string) => {
-    event.preventDefault(); // Prevent default navigation
-    setBackdropOpen(true); // Show backdrop
-    navigate(to); // Programmatically navigate after showing the backdrop
   };
+
+  // Update URL and fetch results when the user searches
+  const handleSearch = () => {
+    navigate(`/search?q=${query}`);
+    fetchResults(query);
+  };
+
+  // Extract query from URL on component mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchQuery = params.get("q");
+    if (searchQuery) {
+      setQuery(searchQuery);
+      fetchResults(searchQuery);
+    }
+  }, [location.search]);
 
   return (
     <div>
-      <h1>Knowledge Base Page</h1>
-      {/* Example Link */}
-      <a href="/some-other-page" onClick={(e) => handleLinkClick(e, "/some-other-page")}>
-        Go to Some Other Page
-      </a>
-      <Backdrop open={backdropOpen} style={{ zIndex: 1000 }}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
+      <h1>Search Page</h1>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search..."
+      />
+      <button onClick={handleSearch}>Search</button>
+      <div>
+        {results.length > 0 ? (
+          <ul>
+            {results.map((result, index) => (
+              <li key={index}>{result.title}</li> // Adjust based on your result structure
+            ))}
+          </ul>
+        ) : (
+          <p>No results found</p>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default SearchPage;
