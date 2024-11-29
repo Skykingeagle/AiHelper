@@ -14,3 +14,16 @@ const submitQuery = (e: React.FormEvent<HTMLFormElement>) => {
   // Update the search query state
   setSearchQuery(query);
 };
+
+----------
+
+
+Description:
+
+Enabled search query to appear as a URL parameter on the /search page.
+
+Ensured sharing or refreshing the URL loads results for the query.
+
+Updated form submission logic using useNavigate for navigation.
+
+
