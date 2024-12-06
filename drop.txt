@@ -1,29 +1,8 @@
-const submitQuery = (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault(); // Prevent default form submission behavior
-
-  const form = e.target as HTMLFormElement;
-  const query = (form.elements.namedItem("search") as HTMLInputElement)?.value;
-
-  if (!query) return;
-
-  // Update the URL
-  navigate(`/${BASE_URL}/kbs/${id}/search?q=${encodeURIComponent(query)}`, {
-    replace: false, // Ensures a new entry is added to the browser's history stack
-  });
-
-  // Update the search query state
-  setSearchQuery(query);
-};
-
-----------
-
-
-Description:
-
-Enabled search query to appear as a URL parameter on the /search page.
-
-Ensured sharing or refreshing the URL loads results for the query.
-
-Updated form submission logic using useNavigate for navigation.
-
-
+mvn archetype:generate \
+  -DarchetypeGroupId=com.atlassian.maven.archetypes \
+  -DarchetypeArtifactId=confluence-plugin-archetype \
+  -DarchetypeVersion=8.5.11 \
+  -DgroupId=com.example.confluence \
+  -DartifactId=stale-page-highlighter \
+  -Dversion=1.0-SNAPSHOT \
+  -DinteractiveMode=false
